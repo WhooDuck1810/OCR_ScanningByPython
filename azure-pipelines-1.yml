@@ -10,12 +10,26 @@ pool:
   vmImage: ubuntu-latest
 
 steps:
-- task: NodeTool@0
-  inputs:
-    versionSpec: '20.x'
-  displayName: 'Install Node.js'
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.10'
+  
+  - script: |
+      pip install -r requirements.txt
+    workingDirectory: 'backend'
+    displayName: 'Install Python dependencies'
+  
+  - script: |
+      pip install pytest pytest-azurepipelines
+      pytest --junitxml=test-results.xml
+    workingDirectory: 'backend'
+    displayName: 'Run backend tests'
 
-- script: |
-    npm install
-    npm run build
-  displayName: 'npm install and build'
+  - task: PublishTestResults@2
+    inputs:
+      testResultsFormat: 'JUnit'
+      testResultsFiles: '**/test-results.xml'
+      searchFolder: '$(System.DefaultWorkingDirectory)/backend'
+      testRunTitle: 'Backend Python Tests'
+    condition: succeededOrFailed()
+    displayName: 'Publish Test Results'
