@@ -1,15 +1,13 @@
-# Node.js
-# Build a general Node.js project with npm.
-# Add steps that analyze code, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
-
 trigger:
 - main
 
 pool:
-  vmImage: ubuntu-latest
+  name: LocalPool
 
-steps:
+jobs:
+- job: BackendCI
+  displayName: 'Build and Test Backend'
+  steps:
   - task: UsePythonVersion@0
     inputs:
       versionSpec: '3.10'
@@ -33,3 +31,20 @@ steps:
       testRunTitle: 'Backend Python Tests'
     condition: succeededOrFailed()
     displayName: 'Publish Test Results'
+
+- job: FrontendCI
+  displayName: 'Build Frontend'
+  steps:
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '18.x'
+  
+  - script: |
+      npm install
+    workingDirectory: 'frontend'
+    displayName: 'Install Node dependencies'
+  
+  - script: |
+      npm run build
+    workingDirectory: 'frontend'
+    displayName: 'Build frontend assets'
