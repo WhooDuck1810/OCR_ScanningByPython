@@ -2,7 +2,7 @@ trigger:
 - main
 
 pool:
-  name: LocalPool
+  name: LocalPool2
 
 jobs:
 - job: BackendCI
