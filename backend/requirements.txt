@@ -5,3 +5,4 @@ pymupdf
 easyocr
 pillow
 flask-cors  # Just in case, though we are using FastAPI
+sqlalchemy

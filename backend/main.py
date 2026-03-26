@@ -1,10 +1,19 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import shutil
 import os
 import fitz  # PyMuPDF
 from typing import List, Optional
+
+from sqlalchemy.orm import Session
+from database import engine, Base, get_db
+from models import Draft, Quiz, Question
+from parser import parse_quiz_text
+
+# Create tables
+Base.metadata.create_all(bind=engine)
+
 
 app = FastAPI()
 
@@ -24,6 +33,12 @@ if not os.path.exists(UPLOAD_DIR):
 class QuizRequest(BaseModel):
     text: str
     num_questions: Optional[int] = 5
+
+class DraftRequest(BaseModel):
+    id: Optional[int] = None
+    raw_text: Optional[str] = None
+    parsed_data: Optional[list] = None
+
 
 @app.get("/")
 async def root():
@@ -61,36 +76,54 @@ async def upload_pdf(file: UploadFile = File(...)):
 
 @app.post("/api/generate-quiz")
 async def generate_quiz(request: QuizRequest):
-    # Mock implementation - in a real app, this would call an LLM
-    mock_questions = [
-        {
-            "id": 1,
-            "question": "What is the primary purpose of the document?",
-            "options": ["To inform", "To persuade", "To entertain", "To instruct"],
-            "answer": "To inform"
-        },
-        {
-            "id": 2,
-            "question": "Which of the following is mentioned as a key concept?",
-            "options": ["Concept A", "Concept B", "Concept C", "None of the above"],
-            "answer": "Concept A"
-        },
-        {
-            "id": 3,
-            "question": "According to the text, what is the first step?",
-            "options": ["Step 1", "Step 2", "Step 3", "Step 4"],
-            "answer": "Step 1"
-        },
-         {
-            "id": 4,
-            "question": "What is the conclusion regarding the main topic?",
-            "options": ["Positive", "Negative", "Neutral", "Uncertain"],
-            "answer": "Positive"
-        }
-    ]
+    # Backward compatibility or fallback to AI logic if request text is empty
+    try:
+        parsed_questions = parse_quiz_text(request.text)
+        return {"questions": parsed_questions}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/parse-quiz")
+async def parse_quiz(request: QuizRequest):
+    try:
+        parsed_questions = parse_quiz_text(request.text)
+        return {"questions": parsed_questions}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+### NEW DRAFT ENDPOINTS ###
+
+@app.post("/api/drafts")
+async def save_draft(draft: DraftRequest, db: Session = Depends(get_db)):
+    if draft.id:
+        db_draft = db.query(Draft).filter(Draft.id == draft.id).first()
+        if not db_draft:
+            raise HTTPException(status_code=404, detail="Draft not found")
+        db_draft.raw_text = draft.raw_text
+        db_draft.parsed_data = draft.parsed_data
+    else:
+        db_draft = Draft(raw_text=draft.raw_text, parsed_data=draft.parsed_data)
+        db.add(db_draft)
     
-    # In a real scenario, use request.text to generate questions
-    return {"questions": mock_questions}
+    db.commit()
+    db.refresh(db_draft)
+    return {"id": db_draft.id, "message": "Draft saved successfully"}
+
+@app.get("/api/drafts/latest")
+async def get_latest_draft(db: Session = Depends(get_db)):
+    draft = db.query(Draft).order_by(Draft.updated_at.desc()).first()
+    if not draft:
+        return {"id": None, "raw_text": "", "parsed_data": []}
+    return {"id": draft.id, "raw_text": draft.raw_text, "parsed_data": draft.parsed_data}
+
+@app.get("/api/drafts/{draft_id}")
+async def get_draft(draft_id: int, db: Session = Depends(get_db)):
+    draft = db.query(Draft).filter(Draft.id == draft_id).first()
+    if not draft:
+        raise HTTPException(status_code=404, detail="Draft not found")
+    return {"id": draft.id, "raw_text": draft.raw_text, "parsed_data": draft.parsed_data}
+
 
 if __name__ == "__main__":
     import uvicorn

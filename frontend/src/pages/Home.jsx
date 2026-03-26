@@ -173,8 +173,13 @@ function Home() {
               <FileText className="text-emerald-400" /> Extracted Text
             </h2>
             <div className="flex-grow bg-slate-900/50 border border-slate-700 rounded-xl p-4 overflow-auto max-h-[500px] text-slate-400 font-mono text-sm mb-4">
-              {extractedText ? (
-                <pre className="whitespace-pre-wrap">{extractedText}</pre>
+              {extractedText !== '' && extractedText !== undefined && extractedText !== null ? (
+                <textarea
+                  value={extractedText}
+                  onChange={(e) => setExtractedText(e.target.value)}
+                  className="w-full h-full min-h-[300px] bg-transparent text-slate-300 font-mono text-sm resize-none outline-none border-none focus:ring-0 p-0 m-0"
+                  placeholder="Edit your extracted text here..."
+                />
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-slate-600 italic">
                   No content extracted yet.
