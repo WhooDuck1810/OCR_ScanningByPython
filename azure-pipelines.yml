@@ -2,7 +2,7 @@ trigger:
 - main
 
 pool:
-  name: LocalPool
+  name: LocalPool2
 
 jobs:
 - job: BackendCI
@@ -35,9 +35,7 @@ jobs:
 - job: FrontendCI
   displayName: 'Build Frontend'
   steps:
-  - task: NodeTool@0
-    inputs:
-      versionSpec: '18.x'
+
   
   - script: |
       npm install
