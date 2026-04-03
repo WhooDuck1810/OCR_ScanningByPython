@@ -7,6 +7,21 @@ import fitz  # PyMuPDF
 from typing import List, Optional
 
 from sqlalchemy.orm import Session
+from pymongo import MongoClient
+from dotenv import load_dotenv
+
+# Load .env file from the parent directory
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
+MONGO_URI = os.getenv("DB")
+
+try:
+    mongo_client = MongoClient(MONGO_URI)
+    mongo_db = mongo_client["quizauto"]
+    mongo_collection = mongo_db["quizzes"]
+    print("Successfully connected to MongoDB")
+except Exception as e:
+    print(f"Failed to connect to MongoDB: {e}")
+    mongo_collection = None
 from database import engine, Base, get_db
 from models import Draft, Quiz, Question
 from parser import parse_quiz_text
@@ -49,7 +64,9 @@ async def upload_pdf(file: UploadFile = File(...)):
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
     
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
+    import uuid
+    unique_filename = f"{uuid.uuid4()}_{file.filename}"
+    file_path = os.path.join(UPLOAD_DIR, unique_filename)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     
@@ -79,6 +96,9 @@ async def generate_quiz(request: QuizRequest):
     # Backward compatibility or fallback to AI logic if request text is empty
     try:
         parsed_questions = parse_quiz_text(request.text)
+        if parsed_questions and mongo_collection is not None:
+            # Store parsed quiz in MongoDB
+            mongo_collection.insert_one({"raw_text": request.text, "questions": parsed_questions})
         return {"questions": parsed_questions}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -87,9 +107,23 @@ async def generate_quiz(request: QuizRequest):
 async def parse_quiz(request: QuizRequest):
     try:
         parsed_questions = parse_quiz_text(request.text)
+        if parsed_questions and mongo_collection is not None:
+            # Store parsed quiz in MongoDB
+            mongo_collection.insert_one({"raw_text": request.text, "questions": parsed_questions})
         return {"questions": parsed_questions}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/debug")
+async def debug():
+    if mongo_collection is None:
+        return {"status": "MongoDB not connected"}
+    
+    quizzes = list(mongo_collection.find({}, {"raw_text": 0}))
+    return {
+        "count": len(quizzes),
+        "quizzes": [{ "id": str(q["_id"]), "question_count": len(q.get("questions", [])) } for q in quizzes]
+    }
 
 
 ### NEW DRAFT ENDPOINTS ###

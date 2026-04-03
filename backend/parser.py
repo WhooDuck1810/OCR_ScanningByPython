@@ -21,8 +21,8 @@ def parse_quiz_text(raw_text: str):
     lines = raw_text.split('\n')
     
     # Regex patterns
-    q_pattern = re.compile(r'^\s*(\d+)[\.\)]\s+(.*)')
-    opt_pattern = re.compile(r'^\s*([A-Ga-g])[\.\)]\s+(.*)')
+    q_pattern = re.compile(r'^\s*(?:[Cc][aâ]u\s+)?(\d+)[\.\):]\s+(.*)')
+    opt_pattern = re.compile(r'(?:^|\s+)([A-Ga-g])[\.\):]\s+(.*?)(?=\s+[A-Ga-g][\.\):]\s+|$)')
     ans_pattern = re.compile(r'^\s*(?:Answer|Ans)[\s:]*([A-Ga-g])', re.IGNORECASE)
 
     for line in lines:
@@ -43,11 +43,12 @@ def parse_quiz_text(raw_text: str):
             }
             continue
             
-        opt_match = opt_pattern.match(line)
-        if opt_match and current_question is not None:
-             # Capture option text
-             opt_text = opt_match.group(2).strip()
-             current_question["options"].append(opt_text)
+        if opt_pattern.match(line) and current_question is not None:
+             # Find all options on this line
+             opt_matches = list(opt_pattern.finditer(line))
+             for m in opt_matches:
+                 opt_text = m.group(2).strip()
+                 current_question["options"].append(opt_text)
              continue
              
         ans_match = ans_pattern.match(line)
@@ -58,14 +59,7 @@ def parse_quiz_text(raw_text: str):
             current_question["answer"] = ans_letter
             continue
             
-        # If it doesn't match and we have a current question, append to question text or last option
-        if current_question:
-            if not current_question["options"]:
-                # Append to question text
-                current_question["question"] += " " + line
-            else:
-                # Append to last option
-                current_question["options"][-1] += " " + line
+        # Unrecognized lines are skipped instead of appended
 
     if current_question and current_question.get("question") and current_question.get("options"):
         questions.append(current_question)

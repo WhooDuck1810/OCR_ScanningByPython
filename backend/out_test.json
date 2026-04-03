@@ -1,0 +1,225 @@
+{
+  "total": 20,
+  "questions": [
+    {
+      "id": 1,
+      "question": "What is the primary purpose of a \"Sprint\" in Agile methodology?",
+      "options": [
+        "To finish the entire project in one go",
+        "A time-boxed iteration to deliver a functional increment",
+        "A race between developers to see who codes fastest",
+        "To plan the budget for the next fiscal year"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 2,
+      "question": "Which SQL command is used to add a new record to a database table?",
+      "options": [
+        "ADD NEW",
+        "UPDATE",
+        "INSERT INTO",
+        "SAVE"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 3,
+      "question": "In a Relational Database, what does \"CRUD\" stand for?",
+      "options": [
+        "Create, Read, Update, Delete",
+        "Compile, Run, Undo, Deploy",
+        "Copy, Rename, Upload, Download",
+        "Create, Register, Undo, Disconnect"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 4,
+      "question": "Which of the following is a common format for storing a list of choices in a",
+      "options": [
+        "JPEG",
+        "JSON",
+        "MP3",
+        "EXE"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 5,
+      "question": "What is the main function of a Regex (Regular Expression) engine?",
+      "options": [
+        "To compile code into machine language",
+        "To find and manipulate patterns within text",
+        "To encrypt user passwords",
+        "To render CSS animations"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 6,
+      "question": "In web development, what does the \"Frontend\" refer to?",
+      "options": [
+        "The server-side logic",
+        "The database storage",
+        "The user interface and client-side experience",
+        "The physical hardware in the data center"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 7,
+      "question": "Which status code represents a \"Success\" response in an API?",
+      "options": [
+        "404",
+        "500",
+        "200",
+        "403"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 8,
+      "question": "What is a \"Primary Key\" in a database?",
+      "options": [
+        "The password to access the database",
+        "A unique identifier for a record in a table",
+        "The most frequently used column",
+        "A key used to encrypt the entire disk"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 9,
+      "question": "Which tool is commonly used for version control in software development?",
+      "options": [
+        "Photoshop",
+        "Excel",
+        "Git",
+        "Slack"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 10,
+      "question": "What is the benefit of saving a \"Draft\" of a quiz during the creation process?",
+      "options": [
+        "It automatically publishes the quiz to the public",
+        "It prevents data loss if the user leaves the page",
+        "It deletes the previous version of the quiz",
+        "It speeds up the internet connection"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 11,
+      "question": "Which programming paradigm focuses on declaring what a program should",
+      "options": [
+        "Imperative",
+        "Procedural",
+        "Declarative",
+        "Object-Oriented"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 12,
+      "question": "What is the term for a data structure that follows the Last-In, First-Out (LIFO)",
+      "options": [
+        "Queue",
+        "Stack",
+        "Linked List",
+        "Hash Map"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 13,
+      "question": "Which HTML tag is used to define a hyperlink or anchor?",
+      "options": [
+        "<p>",
+        "<a>",
+        "<h1>",
+        "<div>"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 14,
+      "question": "In software testing, what is the purpose of a \"Unit Test\"?",
+      "options": [
+        "To test the system as a whole",
+        "To verify a small, isolated piece of code",
+        "To test the user interface",
+        "To check for security vulnerabilities"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 15,
+      "question": "Which Object-Oriented Programming (OOP) concept describes the bundling of data",
+      "options": [
+        "Inheritance",
+        "Polymorphism",
+        "Abstraction",
+        "Encapsulation"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 16,
+      "question": "What is the primary purpose of an HTTP GET request?",
+      "options": [
+        "To submit data to be processed",
+        "To retrieve data from a specified resource",
+        "To modify an existing resource",
+        "To delete a resource"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 17,
+      "question": "In Scrum terminology, what is the list of \"to do\" items, including feature definitions,",
+      "options": [
+        "Sprint Goal",
+        "Product Backlog",
+        "Kanban Board",
+        "User Story"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 18,
+      "question": "In a relational database, a column (or set of columns) that refers to the primary key",
+      "options": [
+        "Candidate Key",
+        "Foreign Key",
+        "Unique Key",
+        "Composite Key"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 19,
+      "question": "What is the practice of constantly improving the code structure and maintainability",
+      "options": [
+        "Debugging",
+        "Compilation",
+        "Refactoring",
+        "Continuous Integration"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 20,
+      "question": "What term describes an error that occurs during the execution of a program, often",
+      "options": [
+        "Syntax Error",
+        "Compile-time Error",
+        "Logic Error",
+        "Run-time Exception"
+      ],
+      "answer": ""
+    }
+  ]
+}

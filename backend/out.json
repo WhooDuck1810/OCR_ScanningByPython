@@ -1,0 +1,555 @@
+{
+  "total": 50,
+  "questions": [
+    {
+      "id": 1,
+      "question": "Nguyên thủ những nước nào sau đây tham dự Hội nghị Ianta (2/1945)?",
+      "options": [
+        "Anh, Pháp, Mĩ.",
+        "Anh, Mĩ, Liên Xô.",
+        "Anh, Pháp, Đức.",
+        "Mĩ, Liên Xô, Trung Quốc."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 2,
+      "question": "Một trong những nội dung quan trọng của Hội nghị Ianta là:",
+      "options": [
+        "đàm phán, kí kết các hiệp ước với các nước phát xít bại trận.",
+        "thỏa thuận việc giải giáp phát xít Nhật ở Đông Dương.",
+        "thỏa thuận phân chia phạm vi ảnh hưởng ở châu Âu và châu Á.",
+        "các nước phát xít Đức, Italia kí văn kiện đầu hàng phe Đồng minh."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 3,
+      "question": "Theo quyết định của Hội nghị Ianta (2/1945), khu vực nào dưới đây thuộc phạm",
+      "options": [
+        "Đông Âu",
+        "Tây Âu",
+        "Đông Nam Á",
+        "Tây Đức"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 4,
+      "question": "Hội nghị Ianta (2/1945) đã họp ở đâu?",
+      "options": [
+        "Anh",
+        "Pháp",
+        "Thụy Sĩ",
+        "Liên Xô"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 5,
+      "question": "Những quyết định của Hội nghị Ianta (2/1945) có ảnh hưởng như thế nào đến tình",
+      "options": [
+        "Mở đầu cho cuộc Chiến tranh lạnh giữa Mĩ và Liên Xô.",
+        "Đánh dấu sự hình thành một trật tự thế giới mới sau chiến tranh.",
+        "Trở thành khuôn khổ của một trật tự thế giới sau chiến tranh.",
+        "Đánh dấu sự xác lập vai trò thống trị thế giới của chủ nghĩa đế quốc Mĩ."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 6,
+      "question": "Có bao nhiêu quốc gia tham gia sáng lập tổ chức Liên hợp quốc?",
+      "options": [
+        "35.",
+        "48.",
+        "50.",
+        "55"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 7,
+      "question": "Hiến chương Liên hợp quốc được thông qua tại Hội nghị nào ?",
+      "options": [
+        "Hội nghị Ianta (1945).",
+        "Hội nghị Xan Phranxixcô (1946).",
+        "Hội nghị Pốtxđam (1946).",
+        "Hội nghị Pari (1973)."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 8,
+      "question": "Cơ quan nào của Liên hợp quốc có sự tham gia của đầy đủ tất cả các thành viên,",
+      "options": [
+        "Ban thư kí.",
+        "Hội đồng bảo an.",
+        "Hội đồng quản thác quốc tế.",
+        "Đại hội đồng."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 9,
+      "question": "Nguyên tắc nhất trí giữa năm nước lớn trong tổ chức Liên hợp quốc được đề ra",
+      "options": [
+        "Tại Hội nghị Tê-hê-ran (1943).",
+        "Tại Hội nghị Xan Phran-xi-xcô (Tháng 4 - 6/1945).",
+        "Tại Hội nghị I-an-ta (tháng 2/1945).",
+        "Tại Hội nghị Pốt-xđam (tháng 7/1945)."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 10,
+      "question": "Nguyên thủ của các nước tham gia Hội nghị I-an-ta là",
+      "options": [
+        "Rudơven, Clêmăngxô, Sớcsin.",
+        "Aixenhao, Xtalin, Clêmăngxô.",
+        "Aixenhao, Xtalin, Sớcsin.",
+        "Rudơven, Xtalin, Sớcsin."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 11,
+      "question": "Hội đồng Bảo an Liên hợp quốc có bao nhiêu nước thành viên ?",
+      "options": [
+        "15 thành viên",
+        "5 thành viên",
+        "20 thành viên",
+        "10 thành viên"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 12,
+      "question": "Năm 1977, Việt Nam trở thành thành viên thứ mấy của Liên hợp quốc?",
+      "options": [
+        "Thành viên thứ 148.",
+        "Thành viên thứ 146.",
+        "Thành viên thứ 149.",
+        "Thành viên thứ 147."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 13,
+      "question": "Sự tham gia của Liên Xô trong ban thường trực Hội đồng Bảo an Liên hợp quốc",
+      "options": [
+        "làm cho xu thế hòa bình trở nên phổ biến sau Chiến tranh thế giới thứ hai.",
+        "góp phần hạn chế sự thao túng của chủ nghĩa tư bản đối với Liên hợp quốc.",
+        "khẳng định vai trò tối cao của chủ nghĩa xã hội trong tổ chức Liên hợp quốc.",
+        "xoa dịu mâu thuẫn giữa khối tư bản chủ nghĩa và xã hội chủ nghĩa."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 14,
+      "question": "Theo quyết định của Hội nghị Ianta, quân đội của những nước nào sẽ làm nhiệm",
+      "options": [
+        "Anh, Pháp, Liên Xô, Mĩ.",
+        "Anh, Liên Xô, Trung Quốc, Mĩ.",
+        "Mĩ, Liên Xô, Canada, Pháp.",
+        "Mĩ, Pháp, Anh, Canada."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 15,
+      "question": "Sự hình thành nhà nước Cộng hòa Liên bang Đức (9/1949) là :",
+      "options": [
+        "kết quả của cuộc đấu tranh vì độc lập, tự do của người dân Đức.",
+        "sự thoả thuận của Anh, Mĩ, Liên Xô tại Hội nghị I-an-ta.",
+        "âm mưu của các nước Anh, Pháp, Mĩ nhằm xây dựng một tiền đồn chống chủ nghĩa xã",
+        "hậu quả của những chính sách phản động mà chủ nghĩa phát xít đã thi hành ở đất nước"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 16,
+      "question": "Đặc điểm nổi bật của trật tự thế giới mới được hình thành sau Chiến tranh thế",
+      "options": [
+        "Được thiết lập trên cơ sở các nước tư bản thắng trận áp đặt quyền thống trị đối với các",
+        "Là trật tự thế giới hoàn toàn do chủ nghĩa tư bản thao túng.",
+        "Có sự phân tuyến triệt để giữa hai phe: xã hội chủ nghĩa và tư bản chủ nghĩa.",
+        "Được thiết lập trên cơ sở các nước thắng trận cùng nhau hợp tác để thống trị, bóc lột"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 17,
+      "question": "Theo thỏa thuận của Hội nghị Pốtxđam (1945), các nước tham gia giải giáp phát",
+      "options": [
+        "Anh và Pháp.",
+        "Mĩ và Liên Xô.",
+        "Trung Hoa Dân quốc và Anh.",
+        "Trung Hoa Dân quốc và Liên Xô."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 18,
+      "question": "Theo thỏa thuận của Hội nghị Pốtxđam (1945), quân đội nước nào tiến hành giải",
+      "options": [
+        "Anh",
+        "Pháp",
+        "Liên Xô",
+        "Mĩ"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 19,
+      "question": "Theo thỏa thuận của Hội nghị Pốtxđam (1945), quân đội nước nào tiến hành giải",
+      "options": [
+        "Pháp.",
+        "Trung Hoa Dân quốc.",
+        "Anh.",
+        "Mĩ."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 20,
+      "question": "Trật tự thế giới mới được hình thành ngay sau Chiến tranh thế giới thứ hai là",
+      "options": [
+        "trật tự hai cực Ianta.",
+        "trật tự thế giới đơn cực.",
+        "trật tự thế giới đa cực.",
+        "trật tự Véc-xai Oa-sinh-tơn."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 21,
+      "question": "Hội nghị cấp cao của ba cường quốc Liên Xô, Mĩ, Anh từ ngày 4 đến ngày 11-2-",
+      "options": [
+        "Oa-sinh-tơn (Mĩ).",
+        "I-an-ta (Liên Xô).",
+        "Pôt-xđam (Đức).",
+        "Luân Đôn (Anh)."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 22,
+      "question": "Một trong những quyết định của Hội nghị Ianta (2/1945) là",
+      "options": [
+        "sử dụng bom nguyên từ để tiêu diệt phát xít Nhật.",
+        "khắc phục hậu quả của Chiến tranh thế giới thứ hai.",
+        "tiêu diệt tận gốc chủ nghĩa phát xít Đức và quân phiệt Nhật.",
+        "phân chia lực lượng giải giáp phát xít Nhật ở Đông Dương."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 23,
+      "question": "Ba cường quốc Liên Xô, Mĩ, Anh thống nhất thành lập Liên hợp Quốc tại Hội",
+      "options": [
+        "Hội nghị Ianta - Liên Xô (2 - 1945).",
+        "Hội nghị Xan Phranxixcô - Mĩ (4 - 6 - 1945).",
+        "Hội nghị Pốtxđam - Đức (7 - 8 -1945).",
+        "Hội nghị Têhêran - Iran (2 - 1943)."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 24,
+      "question": "Duy trì hòa bình và an ninh thế giới là nhiệm vụ chính của",
+      "options": [
+        "Liên minh châu Âu",
+        "Hội nghị I-an-ta.",
+        "tổ chức ASEAN.",
+        "Liên hợp quốc."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 25,
+      "question": "Theo quyết định của Hội nghị Ianta (2/1945), Nhật Bản thuộc phạm vi ảnh",
+      "options": [
+        "Mĩ.",
+        "Anh.",
+        "Trung Quốc.",
+        "Liên Xô."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 26,
+      "question": "Hội nghị Pốtxđam (7 – 8/1945) được triệu tập ở đâu?",
+      "options": [
+        "Liên Xô.",
+        "Mĩ.",
+        "Đức.",
+        "Anh."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 27,
+      "question": "Theo quyết định của Hội nghị Ianta (2/1945), khu vực nào dưới đây thuộc phạm",
+      "options": [
+        "Nam Triều Tiên.",
+        "Đông Âu.",
+        "Đông Đức.",
+        "Bắc Triều Tiên."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 28,
+      "question": "Theo quyết định của Hội nghị Ianta (2/1945), hai quốc gia nào ở châu Âu trở",
+      "options": [
+        "Pháp và Áo.",
+        "Anh và Đức.",
+        "Áo và Phần Lan.",
+        "Bỉ và Đức."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 29,
+      "question": "Theo quyết định của Hội nghị Ianta (2/1945), Trung Quốc cần trở thành một",
+      "options": [
+        "độc lập và tự do.",
+        "thống nhất và dân chủ.",
+        "tự trị và dân chủ.",
+        "độc lập và thống nhất."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 30,
+      "question": "Theo quyết định của Hội nghị Ianta (2/1945), quân đội những nước nào sẽ",
+      "options": [
+        "Anh và Pháp.",
+        "Trung Hoa Dân quốc và Anh.",
+        "Liên Xô và Mĩ.",
+        "Mĩ và Trung Hoa Dân quốc."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 31,
+      "question": "Nội dung nào sau đây không phải là quyết định của Hội nghị Ianta (2/1945)?",
+      "options": [
+        "Thành lập tòa án quốc tế Nuyrambe để xét xử tội phạm chiến tranh.",
+        "Thống nhất mục tiêu tiêu diệt tận gốc chủ nghĩa phát xít.",
+        "Thống nhất về việc thành lập tổ chức Liên Hợp quốc.",
+        "Phân chia phạm vi ảnh hưởng ở châu Âu và châu Á."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 32,
+      "question": "Tổ chức nào sau đây không thuộc Liên hợp quốc?",
+      "options": [
+        "UNICEF",
+        "WTO",
+        "NATO",
+        "UNESCO"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 33,
+      "question": "Trụ sở của tổ chức Liên Hợp quốc được đặt ở đâu?",
+      "options": [
+        "NewYork",
+        "Washington",
+        "California",
+        "Boston"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 34,
+      "question": "Nguyên tắc cơ bản nhất chỉ đạo hoạt động của Liên Hợp quốc",
+      "options": [
+        "tôn trọng toàn vẹn lãnh thổ và độc lập chính trị của tất cả các nước",
+        "không can thiệp vào công việc nội bộ của bất cứ nước nào",
+        "bình đẳng chủ quyền giữa các quốc gia và quyền tự quyết của các dân tộc",
+        "chung sống hòa bình và sự nhất trí giữa 5 nước lớn (Liên Xô, Mĩ, Anh, Pháp, Trung"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 35,
+      "question": "Vai trò trọng yếu của Hội đồng Bảo an Liên hợp quốc là",
+      "options": [
+        "giải quyết thỏa đáng các vấn đề về kinh tế - xã hội.",
+        "tăng cường quan hệ hợp tác giữa các nước.",
+        "giải quyết mọi công việc của Đại hội đồng.",
+        "chịu trách nhiệm chính về duy trì hòa bình và an ninh thế giới."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 36,
+      "question": "Hiến chương Liên hợp quốc chính thức có hiệu lực từ khi nào?",
+      "options": [
+        "24 – 11 – 1945",
+        "24 -10 – 1945",
+        "25 – 4 – 1945",
+        "26 – 6 – 1945"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 37,
+      "question": "Việt Nam lần đầu tiên được bầu làm Ủy viên không thường trực Hội đồng Bảo",
+      "options": [
+        "2008-2009.",
+        "2007 – 2008",
+        "2009 – 2010",
+        "2006 – 2007"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 38,
+      "question": "Nội dung gây nhiều tranh cãi nhất giữa ba cường quốc Liên Xô, Mỹ, Anh tại Hội",
+      "options": [
+        "tiêu diệt tận gốc chủ nghĩa phát xít Đức và quân phiệt Nhật.",
+        "thành lập tổ chức Liên hợp quốc để duy trì hòa bình thế giới.",
+        "phân chia phạm vi ảnh hưởng của các cường quốc thắng trận.",
+        "giải quyết các hậu quả chiến tranh, phân chia chiến lợi phẩm."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 39,
+      "question": "Theo quyết định của Hội nghị Ianta (2/1945), vùng Đông Đức, Đông Âu, miền",
+      "options": [
+        "Mĩ",
+        "Liên Xô",
+        "Pháp",
+        "Anh"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 40,
+      "question": "Theo nguyên tắc nhất trí của 5 nước Ủy viên thường trực, một quyết định của",
+      "options": [
+        "chỉ có ít nước bỏ phiếu chống phản đối.",
+        "không có nước nào bỏ phiếu chống phản đối.",
+        "không có nước nào bỏ phiếu phản đối.",
+        "phần lớn các nước bỏ phiếu thuận phản đối."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 41,
+      "question": "Một trong những điều kiện để Liên Xô tham chiến chống Nhật theo quyết định",
+      "options": [
+        "Mĩ và các nước Đồng minh phải ký cam kết không tấn công Liên Xô",
+        "khôi phục quyền lợi của nước Nga bị mất do cuộc chiến tranh Nga – Nhật 1904 – 1905",
+        "phân chia vùng Đông Âu thuộc phạm vi ảnh hưởng của Liên Xô",
+        "Liên Xô được toàn quyền chiếm đóng nước Đức"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 42,
+      "question": "Nội dung nào không phản ánh đúng vấn đề cấp bách đặt ra đối với các cường",
+      "options": [
+        "Nhanh chóng đánh bại hoàn toàn các nước phát xít.",
+        "Giải quyết hậu quả chiến tranh thế giới để lại.",
+        "Phân chia thành quả giữa các nước thắng trận.",
+        "Tổ chức lại thế giới sau chiến tranh."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 43,
+      "question": "Việt Nam đã vận dụng nguyên tắc nào sau đây của Liên Hợp Quốc để giải quyết",
+      "options": [
+        "Giải quyết các tranh chấp quốc tế bằng biện pháp hòa bình.",
+        "Chung sống hòa bình và sự nhất trí giữa năm nước lớn.",
+        "Tôn trọng toàn vẹn lãnh thổ và độc lập chính trị của tất cả các nước.",
+        "Bình đẳng chủ quyền giữa các quốc gia dân tộc."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 44,
+      "question": "Hiến chương Liên hợp quốc quy định bộ máy của tổ chức này gồm bao nhiêu cơ",
+      "options": [
+        "Bốn cơ quan",
+        "Năm cơ quan",
+        "Sáu cơ quan",
+        "Bảy cơ quan"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 45,
+      "question": "Để tiêu diệt tận gốc chủ nghĩa quân phiệt Nhật Bản và nhanh chóng kết thúc",
+      "options": [
+        "Anh và Liên Xô tiêu diệt lực lượng phát xít Nhật ở Trung Quốc.",
+        "Liên Xô không được tham chiến ở châu Á.",
+        "Liên Xô sẽ tham chiến chống Nhật ở châu Á.",
+        "Mĩ sẽ tham chiến chống Nhật ở châu Á."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 46,
+      "question": "Nội dung nào dưới đây không phản ánh vai trò của Liên hợp quốc?",
+      "options": [
+        "Duy trì hòa bình và an ninh thế giới.",
+        "Hoạt định chính sách phát triển văn hóa cho mỗi quốc gia.",
+        "Giải quyết các vụ tranh chấp bằng biện pháp hòa bình.",
+        "Thúc đẩy mối quan hệ hữu nghị và hợp tác quốc tế."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 47,
+      "question": "Nội dung nào không phản ánh mục đích hoạt động của Liên hợp quốc?",
+      "options": [
+        "Duy trì hòa bình và an ninh thế giới.",
+        "Tôn trọng toàn vẹn lãnh thổ của các quốc gia.",
+        "Phát triển các mối quan hệ hữu nghị giữa các nước.",
+        "Tiến hành hợp tác quốc tế trên cơ sở bình đẳng và tự quyết."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 48,
+      "question": "Nhiệm kì của các nước ủy viên không thường trực Hội đồng Bảo an Liên hợp",
+      "options": [
+        "2 năm",
+        "3 năm",
+        "4 năm",
+        "5 năm"
+      ],
+      "answer": ""
+    },
+    {
+      "id": 49,
+      "question": "Các quốc gia trên thế giới tổ chức hội nghị thành lập Liên hợp quốc khi",
+      "options": [
+        "Chiến tranh thế giới thứ hai bùng nổ.",
+        "Chiến tranh thế giới thứ hai chưa diễn ra.",
+        "Chiến tranh thế giới thứ hai sắp kết thúc.",
+        "Chiến tranh thế giới thứ hai."
+      ],
+      "answer": ""
+    },
+    {
+      "id": 50,
+      "question": "Tổ chức có vai trò duy trì hòa bình thế giới sau Chiến tranh Thế giới thứ hai là",
+      "options": [
+        "Hội Quốc liên",
+        "UNESCO",
+        "Liên hợp quốc",
+        "NATO"
+      ],
+      "answer": ""
+    }
+  ]
+}

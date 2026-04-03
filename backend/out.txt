@@ -1,0 +1,8 @@
+--- RAW TEXT START (First 1000 characters) ---
+Traceback (most recent call last):
+  File "C:\Users\admin\Downloads\New folder (2)\QuizAuto\backend\test_pdf.py", line 13, in <module>
+    print(text[:1000])
+  File "C:\Users\admin\miniforge3\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u01b0' in position 5: character maps to <undefined>
