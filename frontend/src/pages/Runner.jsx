@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { shuffleQuiz } from '../utils/shuffle';
 
 export default function Runner() {
   const [questions, setQuestions] = useState([]);
@@ -10,10 +11,9 @@ export default function Runner() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // For Sprint 2, just get the latest draft to run it
     axios.get('http://localhost:8088/api/drafts/latest').then(res => {
       if (res.data && res.data.parsed_data) {
-        setQuestions(res.data.parsed_data);
+        setQuestions(shuffleQuiz(res.data.parsed_data));
       }
     }).catch(err => console.error("Error loading quiz", err));
   }, []);
