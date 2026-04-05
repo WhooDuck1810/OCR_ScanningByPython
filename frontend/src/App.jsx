@@ -5,7 +5,8 @@ import QuizPage from './pages/QuizPage';
 import Editor from './pages/Editor';
 import Runner from './pages/Runner';
 import Dashboard from './pages/Dashboard';
-
+import EnhancedQuizRunner from './pages/EnhancedQuizRunner';
+import EnhancedResults from './pages/EnhancedResults';
 function App() {
   return (
     <BrowserRouter>
@@ -20,6 +21,8 @@ function App() {
         <Route path="/editor" element={<Editor />} />
         <Route path="/runner/:quizId?" element={<Runner />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/enhanced-quiz/:quizId?" element={<EnhancedQuizRunner />} />
+        <Route path="/enhanced-results/:quizId?" element={<EnhancedResults />} />
       </Routes>
     </BrowserRouter>
   );

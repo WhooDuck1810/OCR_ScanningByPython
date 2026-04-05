@@ -50,6 +50,41 @@ export default function Editor() {
     navigate('/runner/draft');
   };
 
+  // NEW: Handle Enhanced Quiz navigation
+  const handleStartEnhancedQuiz = async () => {
+    // Save current draft first if there's parsed data
+    if (parsedData.length === 0) {
+      alert("Please generate preview first");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Save current draft
+      const res = await axios.post('http://localhost:8088/api/drafts', {
+        id: draftId,
+        raw_text: rawText,
+        parsed_data: parsedData
+      });
+      setDraftId(res.data.id);
+
+      // Navigate to enhanced quiz runner with the parsed data
+      navigate('/enhanced-quiz', {
+        state: {
+          quizData: {
+            name: "Enhanced Quiz",
+            questions: parsedData
+          },
+          timeLimit: 300 // 5 minutes
+        }
+      });
+    } catch (err) {
+      console.error("Error saving draft", err);
+      alert("Failed to save draft. Please try again.");
+    }
+    setIsSaving(false);
+  };
+
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 60px)', padding: '20px', gap: '20px' }}>
       {/* Left Pane: Raw Text */}
@@ -66,6 +101,22 @@ export default function Editor() {
           <button onClick={handleSaveDraft} disabled={isSaving} style={{ padding: '10px 20px', background: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
             {isSaving ? 'Saving...' : 'Save Draft'}
           </button>
+          {/* NEW Enhanced Quiz Button */}
+          <button
+            onClick={handleStartEnhancedQuiz}
+            disabled={!parsedData.length || isSaving}
+            style={{
+              padding: '10px 20px',
+              background: parsedData.length && !isSaving ? '#8b5cf6' : '#6c757d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: parsedData.length && !isSaving ? 'pointer' : 'not-allowed',
+              fontWeight: 'bold'
+            }}
+          >
+            🚀 Take Enhanced Quiz
+          </button>
         </div>
       </div>
 
@@ -75,7 +126,7 @@ export default function Editor() {
           <h2>Live Preview</h2>
           <button onClick={handleStartQuiz} disabled={!parsedData.length} style={{ padding: '10px 20px', background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Take Quiz</button>
         </div>
-        
+
         {parsedData.length === 0 ? (
           <p style={{ color: '#666' }}>No questions parsed yet. Enter text and click Generate Preview.</p>
         ) : (
