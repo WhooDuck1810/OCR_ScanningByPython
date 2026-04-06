@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, XCircle } from 'lucide-react';
+import { shuffleQuiz } from '../utils/shuffle';
 
 function QuizPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const questions = location.state?.questions || [];
+  const rawQuestions = location.state?.questions || [];
 
-  // State to track selected answers: { questionId: selectedOption }
+  const questions = useMemo(() => shuffleQuiz(rawQuestions), [rawQuestions]);
+
   const [answers, setAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);
 
