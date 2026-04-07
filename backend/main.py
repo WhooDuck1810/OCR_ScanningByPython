@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Request
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import shutil
@@ -8,10 +8,7 @@ from typing import List, Optional
 from datetime import datetime
 
 import fitz  # PyMuPDF
-
-from sqlalchemy.orm import Session
-from database import engine, Base, get_db
-from models import Draft, Quiz, Question
+from pymongo import ReturnDocument
 from enhanced_parser import parse_quiz_text, parse_quiz_text_advanced, validate_questions
 from timer_backend import (
     init_timer_handler, sync_time_handler, validate_time_handler,
@@ -20,12 +17,15 @@ from timer_backend import (
     InitTimerRequest, SyncTimeRequest, ValidateTimeRequest, SubmitQuizRequest
 )
 
-# Optional MongoDB - only if .env has DB configured
+# MongoDB is required for all persistence
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
 
 MONGO_URI = os.getenv("DB")
 mongo_collection = None
+saved_quizzes_collection = None
+drafts_collection = None
+counters_collection = None
 
 if MONGO_URI:
     try:
@@ -33,12 +33,15 @@ if MONGO_URI:
         mongo_client = MongoClient(MONGO_URI)
         mongo_db = mongo_client["quizauto"]
         mongo_collection = mongo_db["quizzes"]
+        saved_quizzes_collection = mongo_db["saved_quizzes"]
+        drafts_collection = mongo_db["drafts"]
+        counters_collection = mongo_db["counters"]
         print("✅ MongoDB connected")
     except Exception as e:
         print(f"⚠️ MongoDB not connected: {e}")
 
-# Create tables
-Base.metadata.create_all(bind=engine)
+if mongo_collection is None:
+    raise RuntimeError("MongoDB is required. Set DB in .env")
 
 app = FastAPI(title="Quiz Generator API", version="2.0")
 
@@ -70,6 +73,18 @@ class DraftRequest(BaseModel):
 class SaveQuizRequest(BaseModel):
     name: str
     questions: List[dict]
+
+
+def _next_id(counter_name: str) -> int:
+    if counters_collection is None:
+        raise HTTPException(status_code=500, detail="MongoDB counters collection unavailable")
+    doc = counters_collection.find_one_and_update(
+        {"_id": counter_name},
+        {"$inc": {"value": 1}},
+        upsert=True,
+        return_document=ReturnDocument.AFTER,
+    )
+    return int(doc["value"])
 
 # ============ Root Endpoint ============
 
@@ -130,7 +145,7 @@ async def generate_quiz(request: QuizRequest):
             parsed_questions = parsed_questions[:request.num_questions]
         
         # Store in MongoDB if available (from Version 2)
-        if parsed_questions and mongo_collection:
+        if parsed_questions and mongo_collection is not None:
             mongo_collection.insert_one({
                 "raw_text": request.text, 
                 "questions": parsed_questions,
@@ -156,7 +171,7 @@ async def parse_quiz(request: QuizRequest):
         parsed_questions = validate_questions(parsed_questions)
         
         # Store in MongoDB if available (from Version 2)
-        if parsed_questions and mongo_collection:
+        if parsed_questions and mongo_collection is not None:
             mongo_collection.insert_one({
                 "raw_text": request.text, 
                 "questions": parsed_questions,
@@ -174,65 +189,58 @@ async def parse_quiz(request: QuizRequest):
 # ============ Quiz Management (from Version 1) ============
 
 @app.post("/api/save-quiz")
-async def save_quiz(request: SaveQuizRequest, db: Session = Depends(get_db)):
+async def save_quiz(request: SaveQuizRequest):
     try:
-        quiz = Quiz(name=request.name)
-        db.add(quiz)
-        db.flush()
-        
-        for q in request.questions:
-            question = Question(
-                quiz_id=quiz.id,
-                question_text=q.get("question", ""),
-                choices_list=q.get("options", []),
-                correct_answer=q.get("answer", q.get("correct_answer", ""))
-            )
-            db.add(question)
-        
-        db.commit()
-        db.refresh(quiz)
+        quiz_id = _next_id("saved_quizzes")
+        saved_quizzes_collection.insert_one(
+            {
+                "quiz_id": quiz_id,
+                "name": request.name,
+                "questions": request.questions,
+                "created_at": datetime.utcnow(),
+            }
+        )
         
         return {
             "status": "success",
-            "quiz_id": quiz.id,
-            "name": quiz.name,
+            "quiz_id": quiz_id,
+            "name": request.name,
             "question_count": len(request.questions)
         }
     except Exception as e:
-        db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to save quiz: {str(e)}")
 
 @app.get("/api/quizzes")
-async def get_quizzes(db: Session = Depends(get_db)):
-    quizzes = db.query(Quiz).all()
+async def get_quizzes():
+    quizzes = list(saved_quizzes_collection.find({}).sort("created_at", -1))
     return [
         {
-            "id": q.id,
-            "name": q.name,
-            "created_at": q.created_at.isoformat(),
-            "question_count": len(q.questions)
+            "id": q.get("quiz_id"),
+            "name": q.get("name", ""),
+            "created_at": q.get("created_at").isoformat() if q.get("created_at") else None,
+            "question_count": len(q.get("questions", [])),
         }
         for q in quizzes
     ]
 
 @app.get("/api/quizzes/{quiz_id}")
-async def get_quiz(quiz_id: int, db: Session = Depends(get_db)):
-    quiz = db.query(Quiz).filter(Quiz.id == quiz_id).first()
+async def get_quiz(quiz_id: int):
+    quiz = saved_quizzes_collection.find_one({"quiz_id": quiz_id})
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
     
     return {
-        "id": quiz.id,
-        "name": quiz.name,
-        "created_at": quiz.created_at.isoformat(),
+        "id": quiz.get("quiz_id"),
+        "name": quiz.get("name", ""),
+        "created_at": quiz.get("created_at").isoformat() if quiz.get("created_at") else None,
         "questions": [
             {
-                "id": q.id,
-                "question": q.question_text,
-                "options": q.choices_list,
-                "answer": q.correct_answer
+                "id": idx + 1,
+                "question": q.get("question", ""),
+                "options": q.get("options", []),
+                "answer": q.get("answer", q.get("correct_answer", "")),
             }
-            for q in quiz.questions
+            for idx, q in enumerate(quiz.get("questions", []))
         ]
     }
 
@@ -252,94 +260,112 @@ async def debug():
 # ============ Draft Endpoints ============
 
 @app.post("/api/drafts")
-async def save_draft(draft: DraftRequest, db: Session = Depends(get_db)):
+async def save_draft(draft: DraftRequest):
     if draft.id:
-        db_draft = db.query(Draft).filter(Draft.id == draft.id).first()
-        if not db_draft:
+        update_result = drafts_collection.update_one(
+            {"draft_id": draft.id},
+            {
+                "$set": {
+                    "raw_text": draft.raw_text,
+                    "parsed_data": draft.parsed_data,
+                    "updated_at": datetime.utcnow(),
+                }
+            },
+        )
+        if update_result.matched_count == 0:
             raise HTTPException(status_code=404, detail="Draft not found")
-        db_draft.raw_text = draft.raw_text
-        db_draft.parsed_data = draft.parsed_data
+        draft_id = draft.id
     else:
-        db_draft = Draft(raw_text=draft.raw_text, parsed_data=draft.parsed_data)
-        db.add(db_draft)
+        draft_id = _next_id("drafts")
+        drafts_collection.insert_one(
+            {
+                "draft_id": draft_id,
+                "raw_text": draft.raw_text,
+                "parsed_data": draft.parsed_data,
+                "updated_at": datetime.utcnow(),
+            }
+        )
     
-    db.commit()
-    db.refresh(db_draft)
-    return {"id": db_draft.id, "message": "Draft saved successfully"}
+    return {"id": draft_id, "message": "Draft saved successfully"}
 
 @app.get("/api/drafts/latest")
-async def get_latest_draft(db: Session = Depends(get_db)):
-    draft = db.query(Draft).order_by(Draft.updated_at.desc()).first()
+async def get_latest_draft():
+    draft = drafts_collection.find_one({}, sort=[("updated_at", -1)])
     if not draft:
         return {"id": None, "raw_text": "", "parsed_data": []}
-    return {"id": draft.id, "raw_text": draft.raw_text, "parsed_data": draft.parsed_data}
+    return {
+        "id": draft.get("draft_id"),
+        "raw_text": draft.get("raw_text", ""),
+        "parsed_data": draft.get("parsed_data", []),
+    }
 
 @app.get("/api/drafts/{draft_id}")
-async def get_draft(draft_id: int, db: Session = Depends(get_db)):
-    draft = db.query(Draft).filter(Draft.id == draft_id).first()
+async def get_draft(draft_id: int):
+    draft = drafts_collection.find_one({"draft_id": draft_id})
     if not draft:
         raise HTTPException(status_code=404, detail="Draft not found")
-    return {"id": draft.id, "raw_text": draft.raw_text, "parsed_data": draft.parsed_data}
+    return {
+        "id": draft.get("draft_id"),
+        "raw_text": draft.get("raw_text", ""),
+        "parsed_data": draft.get("parsed_data", []),
+    }
 
 @app.delete("/api/drafts/{draft_id}")
-async def delete_draft(draft_id: int, db: Session = Depends(get_db)):
-    draft = db.query(Draft).filter(Draft.id == draft_id).first()
-    if not draft:
+async def delete_draft(draft_id: int):
+    delete_result = drafts_collection.delete_one({"draft_id": draft_id})
+    if delete_result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Draft not found")
-    
-    db.delete(draft)
-    db.commit()
     return {"message": "Draft deleted successfully"}
 
 # ============ Timer and Submission Endpoints ============
 
 @app.post("/api/quiz/init-timer")
-async def init_timer(request: InitTimerRequest, db: Session = Depends(get_db)):
-    return await init_timer_handler(request, db)
+async def init_timer(request: InitTimerRequest):
+    return await init_timer_handler(request)
 
 @app.post("/api/quiz/sync-time")
-async def sync_time(request: SyncTimeRequest, db: Session = Depends(get_db)):
-    return await sync_time_handler(request, db)
+async def sync_time(request: SyncTimeRequest):
+    return await sync_time_handler(request)
 
 @app.post("/api/quiz/validate-time")
-async def validate_time(request: ValidateTimeRequest, db: Session = Depends(get_db)):
-    return await validate_time_handler(request, db)
+async def validate_time(request: ValidateTimeRequest):
+    return await validate_time_handler(request)
 
 @app.post("/api/quiz/submit")
-async def submit_quiz(request: SubmitQuizRequest, db: Session = Depends(get_db), http_request: Request = None):
-    return await submit_quiz_handler(request, db, http_request)
+async def submit_quiz(request: SubmitQuizRequest, http_request: Request = None):
+    return await submit_quiz_handler(request, http_request)
 
 @app.get("/api/quiz/submission/{submission_id}")
-async def get_submission(submission_id: int, db: Session = Depends(get_db)):
-    return await get_submission_handler(submission_id, db)
+async def get_submission(submission_id: int):
+    return await get_submission_handler(submission_id)
 
 @app.get("/api/quiz/submissions/{quiz_id}")
-async def get_quiz_submissions(quiz_id: str, db: Session = Depends(get_db)):
-    return await get_quiz_submissions_handler(quiz_id, db)
+async def get_quiz_submissions(quiz_id: str):
+    return await get_quiz_submissions_handler(quiz_id)
 
 @app.get("/api/quiz/active-timer/{quiz_id}")
-async def get_active_timer(quiz_id: str, db: Session = Depends(get_db)):
-    return await get_active_timer_handler(quiz_id, db)
+async def get_active_timer(quiz_id: str):
+    return await get_active_timer_handler(quiz_id)
 
 @app.post("/api/quiz/cleanup-sessions")
-async def cleanup_expired_sessions(db: Session = Depends(get_db)):
-    return await cleanup_expired_sessions_handler(db)
+async def cleanup_expired_sessions():
+    return await cleanup_expired_sessions_handler()
 
 # ============ Health Check ============
 
 @app.get("/api/health")
-async def health_check(db: Session = Depends(get_db)):
+async def health_check():
     try:
-        db.execute("SELECT 1")
-        db_status = "healthy"
+        mongo_client.admin.command("ping")
+        mongo_status = "healthy"
     except Exception as e:
-        db_status = f"unhealthy: {str(e)}"
-    
+        mongo_status = f"unhealthy: {str(e)}"
+
     return {
         "status": "ok",
-        "database": db_status,
-        "mongodb": "connected" if mongo_collection else "not configured",
-        "timestamp": datetime.utcnow().isoformat()
+        "database": "mongodb",
+        "mongodb": mongo_status,
+        "timestamp": datetime.utcnow().isoformat(),
     }
 
 # ============ Run the App ============
@@ -349,9 +375,9 @@ if __name__ == "__main__":
     
     print("🚀 Starting Quiz Generator API Server...")
     print(f"📁 Upload directory: {UPLOAD_DIR}")
-    print(f"🗄️  Database: SQLite (quizapp.db)")
-    if mongo_collection:
-        print(f"🍃 MongoDB: Connected")
+    print(f"🗄️  Database: MongoDB only")
+    if mongo_collection is not None:
+        print(f"🍃 MongoDB: Connected for all persistence")
     else:
         print(f"🍃 MongoDB: Not configured (set DB in .env)")
     print(f"⏲️  Timer features enabled")

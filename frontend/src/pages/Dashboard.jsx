@@ -1,14 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
-  const [history, setHistory] = useState([]);
-  const navigate = useNavigate();
-
-  useEffect(() => {
+  const [history] = useState(() => {
     const data = JSON.parse(localStorage.getItem('quizHistory') || '[]');
-    setHistory(data.reverse()); // latest first
-  }, []);
+    return data.reverse(); // latest first
+  });
+  const navigate = useNavigate();
 
   return (
     <div style={{ maxWidth: '800px', margin: '40px auto', padding: '20px' }}>

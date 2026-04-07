@@ -6,9 +6,9 @@ import { shuffleQuiz } from '../utils/shuffle';
 function QuizPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const rawQuestions = location.state?.questions || [];
+  const rawQuestions = location.state?.questions;
 
-  const questions = useMemo(() => shuffleQuiz(rawQuestions), [rawQuestions]);
+  const questions = useMemo(() => shuffleQuiz(rawQuestions || []), [rawQuestions]);
 
   const [answers, setAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);
@@ -80,9 +80,6 @@ function QuizPage() {
 
         <div className="space-y-8">
           {questions.map((q, index) => {
-            const isCorrect = answers[q.id] === q.answer;
-            const isSelected = answers[q.id];
-
             return (
               <div key={q.id} className="bg-slate-800/50 border border-slate-700 rounded-2xl p-8 backdrop-blur-sm">
                 <h3 className="text-xl font-semibold mb-6 flex gap-3">

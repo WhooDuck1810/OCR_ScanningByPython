@@ -1,0 +1,11 @@
+{
+  "id": 1,
+  "quiz_id": "draft",
+  "quiz_name": "Draft Quiz",
+  "score": 0,
+  "total": 20,
+  "percentage": 0.0,
+  "time_taken": 109,
+  "is_auto_submit": false,
+  "submitted_at": "2026-04-06T11:16:14.788Z"
+}

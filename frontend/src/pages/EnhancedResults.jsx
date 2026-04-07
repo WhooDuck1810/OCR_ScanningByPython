@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 const EnhancedResults = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { results, questions } = location.state || {};
+  const { results } = location.state || {};
 
   if (!results) {
     return (

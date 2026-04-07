@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
-
+import { shuffleQuiz } from '../utils/shuffle';
 const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLimit: propTimeLimit = 300 }) => {
   const navigate = useNavigate();
   const { quizId: paramQuizId } = useParams();
@@ -31,18 +31,18 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
       setIsLoading(true);
       try {
         if (propQuizData && propQuizData.questions) {
-          setQuestions(propQuizData.questions);
+          setQuestions(shuffleQuiz(propQuizData.questions));
           setQuizName(propQuizData.name || 'Enhanced Quiz');
           setTimeLeft(propTimeLimit);
         } else if (quizId !== 'draft') {
           const response = await axios.get(`http://localhost:8088/api/quizzes/${quizId}`);
-          setQuestions(response.data.questions);
+          setQuestions(shuffleQuiz(response.data.questions));
           setQuizName(response.data.name);
           setTimeLeft(propTimeLimit);
         } else {
           const response = await axios.get('http://localhost:8088/api/drafts/latest');
           if (response.data && response.data.parsed_data) {
-            setQuestions(response.data.parsed_data);
+            setQuestions(shuffleQuiz(response.data.parsed_data));
             setQuizName('Draft Quiz');
             setTimeLeft(propTimeLimit);
           }
@@ -267,6 +267,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
     alert('⏰ Time is up! Your quiz will be submitted automatically.');
     
     submitQuiz(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSubmitted, submitQuiz]);
 
   // Timer effect - ONLY runs once
@@ -339,6 +340,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
         syncIntervalRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quizStartedAt]);
 
   // Backup trigger - watches timeLeft for when it reaches 0
@@ -387,10 +389,17 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
 
   const handleAnswerSelect = (answer) => {
     console.log(`Selected answer for Q${currentIndex + 1}:`, answer);
-    setAnswers((prev) => ({
-      ...prev,
-      [currentIndex]: answer,
-    }));
+    setAnswers((prev) => {
+      if (prev[currentIndex] === answer) {
+        const newAnswers = { ...prev };
+        delete newAnswers[currentIndex];
+        return newAnswers;
+      }
+      return {
+        ...prev,
+        [currentIndex]: answer,
+      };
+    });
     if (markedForReview[currentIndex]) {
       setMarkedForReview((prev) => ({
         ...prev,
@@ -575,7 +584,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
                   <span>Answered ({answeredCount})</span>
                 </div>
                 <div style={styles.statItem}>
-                  <span style={styles.statDotMarked}></span>
+                  <span style={{color: '#f59e0b', fontSize: '14px'}}>★</span>
                   <span>Marked ({markedCount})</span>
                 </div>
                 <div style={styles.statItem}>
@@ -594,8 +603,15 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
                 if (currentIndex === idx) buttonStyle = {...buttonStyle, ...styles.questionGridButtonCurrent};
                 
                 let statusIcon = '';
-                if (status === 'answered') statusIcon = '✓';
-                if (status === 'marked') statusIcon = '🏷️';
+                let iconStyle = styles.questionStatusIcon;
+                
+                if (status === 'answered') {
+                  statusIcon = '✓';
+                }
+                if (status === 'marked') {
+                  statusIcon = '★';
+                  iconStyle = { ...styles.questionStatusIcon, right: 'auto', left: '4px', top: '2px', bottom: 'auto', fontSize: '12px', color: 'white' };
+                }
                 
                 return (
                   <button
@@ -605,7 +621,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
                     title={`Question ${idx + 1}: ${status}`}
                   >
                     {idx + 1}
-                    {statusIcon && <span style={styles.questionStatusIcon}>{statusIcon}</span>}
+                    {statusIcon && <span style={iconStyle}>{statusIcon}</span>}
                   </button>
                 );
               })}
