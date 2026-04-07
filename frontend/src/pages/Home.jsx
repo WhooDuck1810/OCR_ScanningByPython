@@ -13,11 +13,11 @@ function Home() {
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
-    if (selectedFile && selectedFile.type === 'application/pdf') {
+    if (selectedFile && (selectedFile.type === 'application/pdf' || selectedFile.name.endsWith('.docx'))) {
       setFile(selectedFile);
       setStatus('idle');
     } else {
-      alert('Please upload a PDF file.');
+      alert('Please upload a PDF or DOCX file.');
     }
   };
 
@@ -28,7 +28,7 @@ function Home() {
     setIsScanning(false);
   };
 
-  const handleUpload = async () => {
+  const handleUpload = async (useGemini = false) => {
     if (!file) return;
 
     setStatus('uploading');
@@ -37,8 +37,10 @@ function Home() {
     const formData = new FormData();
     formData.append('file', file);
 
+    const endpoint = useGemini ? 'http://localhost:8088/api/upload-gemini' : 'http://localhost:8088/api/upload';
+
     try {
-      const response = await fetch('http://localhost:8088/api/upload', {
+      const response = await fetch(endpoint, {
         method: 'POST',
         body: formData,
       });
@@ -112,14 +114,14 @@ function Home() {
               <div className="group relative border-2 border-dashed border-slate-600 hover:border-blue-500 rounded-xl p-8 transition-all cursor-pointer">
                 <input
                   type="file"
-                  accept=".pdf"
+                  accept=".pdf,.docx"
                   onChange={handleFileChange}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
                 <div className="text-center">
                   <FileText className="w-12 h-12 text-slate-500 group-hover:text-blue-400 mx-auto mb-4 transition-colors" />
                   <p className="text-slate-300 font-medium">Click to browse or drag & drop</p>
-                  <p className="text-slate-500 text-sm mt-2">Only PDF files accepted</p>
+                  <p className="text-slate-500 text-sm mt-2">PDF and DOCX files accepted</p>
                 </div>
               </div>
             ) : (
@@ -137,13 +139,22 @@ function Home() {
                   </button>
                 </div>
 
-                <button
-                  onClick={handleUpload}
-                  disabled={isScanning}
-                  className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 w-full"
-                >
-                  {isScanning ? <Loader2 className="animate-spin" /> : 'Start Scan'}
-                </button>
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => handleUpload(false)}
+                    disabled={isScanning}
+                    className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                  >
+                    {isScanning ? <Loader2 className="animate-spin" /> : 'Start Scan (PyMuPDF)'}
+                  </button>
+                  <button
+                    onClick={() => handleUpload(true)}
+                    disabled={isScanning}
+                    className="flex-1 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                  >
+                    {isScanning ? <Loader2 className="animate-spin" /> : '✨ Scan with Gemini AI'}
+                  </button>
+                </div>
               </div>
             )}
 
@@ -187,23 +198,31 @@ function Home() {
               )}
             </div>
 
-            {/* Generate Quiz Button */}
+            {/* Actions for Extracted Text */}
             {extractedText && (
-              <button
-                onClick={handleGenerateQuiz}
-                disabled={isGenerating}
-                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="animate-spin" /> Generating Quiz...
-                  </>
-                ) : (
-                  <>
-                    Generate Quiz <ArrowRight className="w-5 h-5" />
-                  </>
-                )}
-              </button>
+              <div className="flex flex-col sm:flex-row gap-4 mt-4">
+                <button
+                  onClick={() => navigate('/editor', { state: { text: extractedText } })}
+                  className="flex-1 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-blue-500/20"
+                >
+                  Open in Editor
+                </button>
+                <button
+                  onClick={handleGenerateQuiz}
+                  disabled={isGenerating}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-emerald-500/20"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="animate-spin" /> Generating...
+                    </>
+                  ) : (
+                    <>
+                      Generate Basic Quiz <ArrowRight className="w-5 h-5" />
+                    </>
+                  )}
+                </button>
+              </div>
             )}
           </div>
         </div>

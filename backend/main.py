@@ -6,6 +6,8 @@ import os
 import uuid
 from typing import List, Optional
 from datetime import datetime
+import time
+import google.generativeai as genai
 
 import fitz  # PyMuPDF
 from pymongo import ReturnDocument
@@ -128,6 +130,52 @@ async def upload_pdf(file: UploadFile = File(...)):
         return {"filename": file.filename, "content": text}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing PDF: {str(e)}")
+
+@app.post("/api/upload-gemini")
+async def upload_pdf_gemini(file: UploadFile = File(...)):
+    allowed_extensions = (".pdf", ".docx")
+    if not any(file.filename.lower().endswith(ext) for ext in allowed_extensions):
+        raise HTTPException(status_code=400, detail="Only PDF or DOCX files are allowed for Gemini")
+    
+    unique_filename = f"{uuid.uuid4()}_{file.filename}"
+    file_path = os.path.join(UPLOAD_DIR, unique_filename)
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    try:
+        # Use the provided API Key
+        genai.configure(api_key="AIzaSyBke7mJ_RQF_EmbAm9CGVDRkQM1OL17zgs")
+        
+        mime_type = "application/pdf"
+        if file.filename.lower().endswith(".docx"):
+            mime_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            
+        uploaded_file = genai.upload_file(path=file_path, mime_type=mime_type)
+        
+        while uploaded_file.state.name == "PROCESSING":
+            time.sleep(2)
+            uploaded_file = genai.get_file(uploaded_file.name)
+            
+        if uploaded_file.state.name == "FAILED":
+            raise Exception("Gemini file processing failed.")
+            
+        model = genai.GenerativeModel(model_name="gemini-2.5-flash")
+        
+        response = model.generate_content([
+            uploaded_file,
+            "Please scan this file and provide the full text content found within it. "
+            "If there are images with text, transcribe them as well. Format the raw text accurately."
+        ])
+        
+        # Cleanup file from google AI Studio
+        try:
+            genai.delete_file(uploaded_file.name)
+        except Exception:
+            pass
+            
+        return {"filename": file.filename, "content": response.text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing with Gemini: {str(e)}")
 
 # ============ Quiz Generation and Parsing ============
 
@@ -287,6 +335,18 @@ async def save_draft(draft: DraftRequest):
         )
     
     return {"id": draft_id, "message": "Draft saved successfully"}
+
+@app.get("/api/drafts/all")
+async def get_all_drafts():
+    drafts = list(drafts_collection.find({}).sort("updated_at", -1))
+    return [
+        {
+            "id": d.get("draft_id"),
+            "question_count": len(d.get("parsed_data", [])),
+            "updated_at": d.get("updated_at").isoformat() if d.get("updated_at") else None
+        }
+        for d in drafts
+    ]
 
 @app.get("/api/drafts/latest")
 async def get_latest_draft():

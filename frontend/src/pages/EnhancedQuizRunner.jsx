@@ -213,6 +213,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
         percentage: percentage,
         timeTaken: timeTaken,
         isAutoSubmit,
+        questions: questions, // Added so we can Retake this specific layout
       });
       localStorage.setItem('quizHistory', JSON.stringify(history));
       
