@@ -159,7 +159,7 @@ async def upload_pdf_gemini(file: UploadFile = File(...)):
         if uploaded_file.state.name == "FAILED":
             raise Exception("Gemini file processing failed.")
             
-        model = genai.GenerativeModel(model_name="gemini-2.5-flash")
+        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
         
         response = model.generate_content([
             uploaded_file,
@@ -175,6 +175,7 @@ async def upload_pdf_gemini(file: UploadFile = File(...)):
             
         return {"filename": file.filename, "content": response.text}
     except Exception as e:
+        print(f"❌ Gemini Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing with Gemini: {str(e)}")
 
 # ============ Quiz Generation and Parsing ============
