@@ -9,6 +9,7 @@ function Home() {
   const [isScanning, setIsScanning] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [status, setStatus] = useState('idle'); // idle, uploading, scanning, success, error
+  const [errorMsg, setErrorMsg] = useState('');
 
   const navigate = useNavigate();
 
@@ -41,13 +42,15 @@ function Home() {
     const endpoint = useGemini ? `${API_BASE_URL}/api/upload-gemini` : `${API_BASE_URL}/api/upload`;
 
     try {
+      setErrorMsg('');
       const response = await fetch(endpoint, {
         method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
-        throw new Error('Upload failed');
+        const errData = await response.json().catch(() => null);
+        throw new Error((errData && errData.detail) || `Upload failed with status ${response.status}`);
       }
 
       const data = await response.json();
@@ -55,6 +58,7 @@ function Home() {
       setStatus('success');
     } catch (error) {
       console.error('Error:', error);
+      setErrorMsg(error.message || 'Something went wrong.');
       setStatus('error');
     } finally {
       setIsScanning(false);
@@ -172,8 +176,8 @@ function Home() {
                 </div>
               )}
               {status === 'error' && (
-                <div className="flex items-center gap-2 text-rose-400">
-                  <AlertCircle /> Something went wrong.
+                <div className="flex items-center gap-2 text-rose-400 p-2 bg-rose-500/10 rounded-lg border border-rose-500/20 text-sm font-medium">
+                  <AlertCircle /> <span>{errorMsg || 'Something went wrong.'}</span>
                 </div>
               )}
             </div>

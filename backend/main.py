@@ -143,8 +143,12 @@ async def upload_pdf_gemini(file: UploadFile = File(...)):
         shutil.copyfileobj(file.file, buffer)
     
     try:
-        # Use the provided API Key
-        genai.configure(api_key="AIzaSyBke7mJ_RQF_EmbAm9CGVDRkQM1OL17zgs")
+        # Load API key securely from environment variable instead of hardcoding it
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            raise Exception("GEMINI_API_KEY is not configured in the server environment (.env).")
+            
+        genai.configure(api_key=api_key)
         
         mime_type = "application/pdf"
         if file.filename.lower().endswith(".docx"):
