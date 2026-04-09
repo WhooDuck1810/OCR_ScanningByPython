@@ -68,7 +68,8 @@ export default function Dashboard() {
           name: selectedQuizName,
           questions: isShuffle ? [...selectedQuestions].sort(() => Math.random() - 0.5) : selectedQuestions
         },
-        timeLimit: tl > 0 ? tl : 999999
+        timeLimit: tl > 0 ? tl : 999999,
+        isShuffle: isShuffle
       }
     });
   };

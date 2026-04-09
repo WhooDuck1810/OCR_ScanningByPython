@@ -1,12 +1,19 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { shuffleQuiz } from '../utils/shuffle';
 import { API_BASE_URL } from '../config';
 const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLimit: propTimeLimit = 300 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { quizId: paramQuizId } = useParams();
   const quizId = propQuizId || paramQuizId || 'draft';
+  
+  const navState = location.state || {};
+  const activeQuizData = propQuizData || navState.quizData;
+  const activeTimeLimit = navState.timeLimit !== undefined ? navState.timeLimit : propTimeLimit;
+  const isShuffle = navState.isShuffle !== undefined ? navState.isShuffle : true; // Keep old behavior as default where it shuffles
+
   
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -31,21 +38,21 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
     const loadQuiz = async () => {
       setIsLoading(true);
       try {
-        if (propQuizData && propQuizData.questions) {
-          setQuestions(shuffleQuiz(propQuizData.questions));
-          setQuizName(propQuizData.name || 'Enhanced Quiz');
-          setTimeLeft(propTimeLimit);
+        if (activeQuizData && activeQuizData.questions) {
+          setQuestions(isShuffle ? shuffleQuiz(activeQuizData.questions) : activeQuizData.questions);
+          setQuizName(activeQuizData.name || 'Enhanced Quiz');
+          setTimeLeft(activeTimeLimit);
         } else if (quizId !== 'draft') {
           const response = await axios.get(`${API_BASE_URL}/api/quizzes/${quizId}`);
-          setQuestions(shuffleQuiz(response.data.questions));
+          setQuestions(isShuffle ? shuffleQuiz(response.data.questions) : response.data.questions);
           setQuizName(response.data.name);
-          setTimeLeft(propTimeLimit);
+          setTimeLeft(activeTimeLimit);
         } else {
           const response = await axios.get(`${API_BASE_URL}/api/drafts/latest`);
           if (response.data && response.data.parsed_data) {
-            setQuestions(shuffleQuiz(response.data.parsed_data));
+            setQuestions(isShuffle ? shuffleQuiz(response.data.parsed_data) : response.data.parsed_data);
             setQuizName('Draft Quiz');
-            setTimeLeft(propTimeLimit);
+            setTimeLeft(activeTimeLimit);
           }
         }
       } catch (error) {
@@ -55,7 +62,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
       }
     };
     loadQuiz();
-  }, [quizId, propQuizData, propTimeLimit]);
+  }, [quizId, activeQuizData, activeTimeLimit, isShuffle]);
 
   // Initialize quiz start time and load saved state
   useEffect(() => {

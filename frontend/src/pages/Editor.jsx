@@ -94,7 +94,8 @@ export default function Editor() {
             name: "Quiz Draft",
             questions: finalQuestions
           },
-          timeLimit: tl > 0 ? tl : 999999 // If no timer, arbitrarily large or handled by enhanced-quiz logic properly
+          timeLimit: tl > 0 ? tl : 999999, // If no timer, arbitrarily large or handled by enhanced-quiz logic properly
+          isShuffle: isShuffle
         }
       });
     } catch (err) {
