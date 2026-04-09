@@ -14,3 +14,4 @@ python main.py
 testing commit 3 
 27.3.2026 update : finish sprint 2 
 
+this is gemini branch
