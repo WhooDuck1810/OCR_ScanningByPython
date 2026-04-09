@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 export default function Dashboard() {
   const [history] = useState(() => {
@@ -21,7 +22,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get('http://localhost:8088/api/drafts/all')
+    axios.get(`${API_BASE_URL}/api/drafts/all`)
       .then(res => {
         setDrafts(res.data || []);
       })
@@ -42,7 +43,7 @@ export default function Dashboard() {
 
   const handleOpenDraftSetup = async (draftId, mode) => {
     try {
-      const res = await axios.get(`http://localhost:8088/api/drafts/${draftId}`);
+      const res = await axios.get(`${API_BASE_URL}/api/drafts/${draftId}`);
       if (!res.data || !res.data.parsed_data) {
         alert("Draft parsing error.");
         return;

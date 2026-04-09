@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Upload, FileText, Loader2, CheckCircle, AlertCircle, Trash2, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 function Home() {
   const [file, setFile] = useState(null);
@@ -37,7 +38,7 @@ function Home() {
     const formData = new FormData();
     formData.append('file', file);
 
-    const endpoint = useGemini ? 'http://localhost:8088/api/upload-gemini' : 'http://localhost:8088/api/upload';
+    const endpoint = useGemini ? `${API_BASE_URL}/api/upload-gemini` : `${API_BASE_URL}/api/upload`;
 
     try {
       const response = await fetch(endpoint, {
@@ -65,7 +66,7 @@ function Home() {
 
     setIsGenerating(true);
     try {
-      const response = await fetch('http://localhost:8088/api/generate-quiz', {
+      const response = await fetch(`${API_BASE_URL}/api/generate-quiz`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 export default function Editor() {
   const [rawText, setRawText] = useState('');
@@ -19,7 +20,7 @@ export default function Editor() {
       setRawText(location.state.text);
       // Optional: clear location state if we don't want it permanently loading this on refresh
     } else {
-      axios.get('http://localhost:8088/api/drafts/latest').then(res => {
+      axios.get(`${API_BASE_URL}/api/drafts/latest`).then(res => {
         if (res.data && res.data.id) {
           setDraftId(res.data.id);
           setRawText(res.data.raw_text || '');
@@ -31,7 +32,7 @@ export default function Editor() {
 
   const handleParse = async () => {
     try {
-      const res = await axios.post('http://localhost:8088/api/parse-quiz', { text: rawText });
+      const res = await axios.post(`${API_BASE_URL}/api/parse-quiz`, { text: rawText });
       setParsedData(res.data.questions || []);
     } catch (err) {
       console.error("Error parsing", err);
@@ -41,7 +42,7 @@ export default function Editor() {
   const handleSaveDraft = async () => {
     setIsSaving(true);
     try {
-      const res = await axios.post('http://localhost:8088/api/drafts', {
+      const res = await axios.post(`${API_BASE_URL}/api/drafts`, {
         id: draftId,
         raw_text: rawText,
         parsed_data: parsedData
@@ -66,7 +67,7 @@ export default function Editor() {
   const handleSetupStart = async () => {
     setIsSaving(true);
     try {
-      const res = await axios.post('http://localhost:8088/api/drafts', {
+      const res = await axios.post(`${API_BASE_URL}/api/drafts`, {
         id: draftId,
         raw_text: rawText,
         parsed_data: parsedData
@@ -96,7 +97,7 @@ export default function Editor() {
   const handleSetupSave = async () => {
     setIsSaving(true);
     try {
-      const res = await axios.post('http://localhost:8088/api/drafts', {
+      const res = await axios.post(`${API_BASE_URL}/api/drafts`, {
         id: draftId,
         raw_text: rawText,
         parsed_data: parsedData
