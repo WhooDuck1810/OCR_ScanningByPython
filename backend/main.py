@@ -21,7 +21,10 @@ from timer_backend import (
 
 # MongoDB is required for all persistence
 from dotenv import load_dotenv
+# Load root .env
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
+# Also load local .env (useful for backend-specific keys like GEMINI_API_KEY)
+load_dotenv()
 
 MONGO_URI = os.getenv("DB")
 mongo_collection = None

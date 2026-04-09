@@ -1,6 +1,6 @@
 import google.generativeai as genai
 
-genai.configure(api_key="AIzaSyBke7mJ_RQF_EmbAm9CGVDRkQM1OL17zgs")
+genai.configure(api_key="[ENCRYPTION_KEY]")
 
 try:
     with open("dummy.pdf", "w") as f:
