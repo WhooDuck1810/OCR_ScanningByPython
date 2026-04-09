@@ -96,10 +96,10 @@ function Home() {
         {/* Header */}
         <header className="mb-12 text-center">
           <h1 className="text-5xl font-extrabold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent mb-4">
-            Quiz Generator
+            QuizAuto
           </h1>
           <p className="text-slate-400 text-lg">
-            Sprint 1: Transform your PDF documents into raw text for quiz generation.
+            Transform your PDF documents into interactive quizzes instantly.
           </p>
         </header>
 

@@ -89,7 +89,8 @@ export default function Editor() {
       });
     } catch (err) {
       console.error("Error saving draft before quiz", err);
-      alert("Failed to initialize quiz. Please try again.");
+      const errorMsg = err.response?.data?.detail || err.message || "Unknown error";
+      alert(`Failed to initialize quiz: ${errorMsg}. You can still try taking it from the Dashboard.`);
     }
     setIsSaving(false);
   };

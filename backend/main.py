@@ -322,7 +322,13 @@ async def save_draft(draft: DraftRequest):
             },
         )
         if update_result.matched_count == 0:
-            raise HTTPException(status_code=404, detail="Draft not found")
+            # Fallback: if ID was provided but not found, create it instead of failing
+            drafts_collection.insert_one({
+                "draft_id": draft.id,
+                "raw_text": draft.raw_text,
+                "parsed_data": draft.parsed_data,
+                "updated_at": datetime.utcnow(),
+            })
         draft_id = draft.id
     else:
         draft_id = _next_id("drafts")
