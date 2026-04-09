@@ -12,7 +12,9 @@ export default function Editor() {
   const [showSetup, setShowSetup] = useState(false);
   const [setupMode, setSetupMode] = useState('normal'); // 'normal' or 'shuffle'
   const [timeLimitStr, setTimeLimitStr] = useState('300'); // '0' means no timer, '300' is 5 minutes
+  const [questionLimitStr, setQuestionLimitStr] = useState('all'); // 'all', '10', '20', etc.
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Load latest draft or text from Home navigation
   useEffect(() => {
@@ -77,12 +79,20 @@ export default function Editor() {
       const tl = parseInt(timeLimitStr, 10);
       const isShuffle = setupMode === 'shuffle';
       
+      let finalQuestions = [...parsedData];
+      if (isShuffle) {
+        finalQuestions = finalQuestions.sort(() => Math.random() - 0.5);
+        if (questionLimitStr !== 'all') {
+          finalQuestions = finalQuestions.slice(0, parseInt(questionLimitStr, 10));
+        }
+      }
+
       // We pass the settings to `/enhanced-quiz`, keeping the logic compatible
       navigate('/enhanced-quiz', {
         state: {
           quizData: {
             name: "Quiz Draft",
-            questions: isShuffle ? [...parsedData].sort(() => Math.random() - 0.5) : parsedData
+            questions: finalQuestions
           },
           timeLimit: tl > 0 ? tl : 999999 // If no timer, arbitrarily large or handled by enhanced-quiz logic properly
         }
@@ -114,116 +124,147 @@ export default function Editor() {
   };
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 60px)', padding: '20px', gap: '20px' }}>
+    <div className="min-h-[calc(100vh-73px)] bg-slate-900 text-slate-100 flex p-6 gap-6 font-sans">
       {/* Left Pane: Raw Text */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0 }}>Raw Text Input</h2>
-          <button onClick={() => setShowHelp(true)} style={{ padding: '6px 12px', background: '#17a2b8', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
-            ❓ Help
+      <div className="flex-1 flex flex-col gap-4 bg-slate-800/50 border border-slate-700 rounded-2xl p-6 backdrop-blur-sm shadow-xl">
+        <div className="flex justify-between items-center bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
+          <h2 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent m-0 flex items-center gap-2">
+            <span className="text-blue-400">📝</span> Raw Text Input
+          </h2>
+          <button 
+            onClick={() => setShowHelp(true)} 
+            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-emerald-400 border border-emerald-500/30 font-semibold rounded-lg transition-all flex items-center gap-2 shadow-sm"
+          >
+            ❓ Help Guide
           </button>
         </div>
+        
         <textarea
-          style={{ flex: 1, padding: '10px', fontSize: '14px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}
+          className="flex-1 p-4 text-sm font-mono whitespace-pre-wrap bg-slate-900/80 text-slate-300 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 focus:outline-none resize-none transition-all"
           value={rawText}
           onChange={(e) => setRawText(e.target.value)}
           placeholder="Paste your quiz text here (e.g. 1. Question... A) Option... Answer: A)"
         />
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={handleParse} style={{ padding: '10px 20px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Generate Preview</button>
-          <button onClick={handleSaveDraft} disabled={isSaving} style={{ padding: '10px 20px', background: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+        
+        <div className="flex gap-4">
+          <button 
+            onClick={handleParse} 
+            className="flex-1 py-3 px-6 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-blue-500/20"
+          >
+            Generate Preview
+          </button>
+          <button 
+            onClick={handleSaveDraft} 
+            disabled={isSaving} 
+            className={`flex-1 py-3 px-6 ${isSaving ? 'bg-slate-600' : 'bg-slate-700 hover:bg-slate-600'} text-white font-bold border border-slate-600 rounded-xl transition-all`}
+          >
             {isSaving ? 'Saving...' : 'Save Draft'}
           </button>
         </div>
       </div>
 
       {/* Right Pane: Live Preview */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2>Live Preview</h2>
-          <div style={{ display: 'flex', gap: '10px' }}>
+      <div className="flex-1 flex flex-col gap-4 bg-slate-800/50 border border-slate-700 rounded-2xl p-6 backdrop-blur-sm shadow-xl max-h-[calc(100vh-121px)]">
+        <div className="flex justify-between items-center bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
+          <h2 className="text-xl font-bold text-slate-200 m-0 flex items-center gap-2">
+            <span className="text-emerald-400">✨</span> Live Preview
+          </h2>
+          <div className="flex gap-3">
             <button 
               onClick={() => handleOpenSetup('normal')} 
               disabled={!parsedData.length || isSaving} 
-              style={{ padding: '10px 20px', background: parsedData.length ? '#28a745' : '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: parsedData.length ? 'pointer' : 'not-allowed', fontWeight: 'bold' }}
+              className={`px-5 py-2 font-bold rounded-lg transition-all ${parsedData.length ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
             >
               Take Normal Quiz
             </button>
             <button
               onClick={() => handleOpenSetup('shuffle')}
               disabled={!parsedData.length || isSaving}
-              style={{
-                padding: '10px 20px',
-                background: parsedData.length && !isSaving ? '#8b5cf6' : '#6c757d',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: parsedData.length && !isSaving ? 'pointer' : 'not-allowed',
-                fontWeight: 'bold'
-              }}
+              className={`px-5 py-2 font-bold rounded-lg transition-all ${parsedData.length && !isSaving ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-500/20' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
             >
-              Shuffle & Take Quiz
+              Shuffle & Take
             </button>
           </div>
         </div>
 
-        {parsedData.length === 0 ? (
-          <p style={{ color: '#666' }}>No questions parsed yet. Enter text and click Generate Preview.</p>
-        ) : (
-          parsedData.map((q, i) => (
-            <div key={i} style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '4px', background: '#f9f9f9' }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '10px', whiteSpace: 'pre-wrap' }}>{q.id}. {q.question}</div>
-              <ul style={{ listStyleType: 'none', padding: 0 }}>
-                {q.options.map((opt, j) => (
-                  <li key={j} style={{ padding: '5px 0', whiteSpace: 'pre-wrap' }}>- {opt}</li>
-                ))}
-              </ul>
-              {q.answer && <div style={{ color: 'green', marginTop: '10px', fontWeight: 'bold' }}>Answer: {q.answer}</div>}
+        <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar flex flex-col gap-4">
+          {parsedData.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-slate-500 italic p-8 text-center border-2 border-dashed border-slate-700 rounded-xl">
+              <span className="text-4xl mb-3">👀</span>
+              No questions parsed yet.<br/>Enter text on the left and click "Generate Preview" to see your quiz take shape.
             </div>
-          ))
-        )}
+          ) : (
+            parsedData.map((q, i) => (
+              <div key={i} className="border border-slate-700/50 p-5 rounded-xl bg-slate-900/60 shadow-sm hover:border-slate-600 transition-colors">
+                <div className="font-bold mb-3 whitespace-pre-wrap text-blue-100 text-lg">
+                  <span className="text-blue-400 mr-2">{q.id}.</span>{q.question}
+                </div>
+                <ul className="list-none p-0 m-0 space-y-2">
+                  {q.options.map((opt, j) => (
+                    <li key={j} className="py-2 px-3 bg-slate-800/80 rounded-lg text-slate-300 border border-slate-700/50 whitespace-pre-wrap flex items-start gap-2">
+                      <span className="text-slate-500 font-bold mt-0.5">•</span>
+                      <span>{opt}</span>
+                    </li>
+                  ))}
+                </ul>
+                {q.answer && (
+                  <div className="mt-4 px-4 py-2 bg-emerald-900/20 border border-emerald-500/30 text-emerald-400 rounded-lg font-bold flex items-center gap-2 inline-block">
+                    <span>✓</span> Answer: {q.answer}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {/* Help Modal */}
       {showHelp && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
-        }}>
-          <div style={{
-            background: 'white', padding: '30px', borderRadius: '8px', maxWidth: '600px', width: '100%',
-            maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
-          }}>
-            <h2 style={{ marginTop: 0, color: '#333' }}>How the Parser Engine Works</h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+          <div className="bg-slate-800 border border-slate-700 p-8 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl">
+            <h2 className="mt-0 text-2xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent mb-6 border-b border-slate-700 pb-4">
+              How the Parser Engine Works
+            </h2>
             
-            <div style={{ lineHeight: '1.6', color: '#444' }}>
-              <p>The parser engine uses specific formatting rules to extract questions, options, and answers from text:</p>
+            <div className="space-y-6 text-slate-300 leading-relaxed">
+              <p className="text-lg">The parser engine uses specific formatting rules to automatically extract questions, options, and answers from unstructured text:</p>
               
-              <h4 style={{ marginBottom: '5px' }}>1. Question Formats</h4>
-              <p style={{ margin: '0 0 10px 0' }}>Questions must start with a number followed by a dot, parenthesis, or slash. Examples: <code>1.</code>, <code>Question 1)</code>, <code>Câu 1/</code></p>
+              <div className="bg-slate-900/50 border border-slate-700 p-4 rounded-xl">
+                <h4 className="font-bold text-blue-400 mb-2 flex items-center gap-2"><span className="bg-blue-500/20 px-2 py-0.5 rounded text-sm">1</span> Question Formats</h4>
+                <p className="m-0 text-sm">Questions must start with a number followed by a dot, parenthesis, or slash. <br/><span className="text-slate-400">Examples:</span> <code className="bg-slate-800 px-1.5 py-0.5 rounded text-emerald-400">1.</code>, <code className="bg-slate-800 px-1.5 py-0.5 rounded text-emerald-400">Question 1)</code>, <code className="bg-slate-800 px-1.5 py-0.5 rounded text-emerald-400">Câu 1/</code></p>
+              </div>
               
-              <h4 style={{ marginBottom: '5px' }}>2. Option Formats</h4>
-              <p style={{ margin: '0 0 10px 0' }}>Options must start with a letter (A-G) followed by a dot or parenthesis. Examples: <code>A)</code>, <code>b.</code></p>
+              <div className="bg-slate-900/50 border border-slate-700 p-4 rounded-xl">
+                <h4 className="font-bold text-purple-400 mb-2 flex items-center gap-2"><span className="bg-purple-500/20 px-2 py-0.5 rounded text-sm">2</span> Option Formats</h4>
+                <p className="m-0 text-sm">Options must start with a letter (A-G) followed by a dot or parenthesis. <br/><span className="text-slate-400">Examples:</span> <code className="bg-slate-800 px-1.5 py-0.5 rounded text-emerald-400">A)</code>, <code className="bg-slate-800 px-1.5 py-0.5 rounded text-emerald-400">b.</code></p>
+              </div>
               
-              <h4 style={{ marginBottom: '5px' }}>3. Inline Answers</h4>
-              <p style={{ margin: '0 0 10px 0' }}>You can specify the answer to a question using keywords like Answer, Ans, or Correct followed by the letter. Example: <code>Answer: A</code></p>
+              <div className="bg-slate-900/50 border border-slate-700 p-4 rounded-xl">
+                <h4 className="font-bold text-emerald-400 mb-2 flex items-center gap-2"><span className="bg-emerald-500/20 px-2 py-0.5 rounded text-sm">3</span> Inline Answers</h4>
+                <p className="m-0 text-sm">You can specify the answer inline using keywords like Answer, Ans, or Correct followed by the letter. <br/><span className="text-slate-400">Example:</span> <code className="bg-slate-800 px-1.5 py-0.5 rounded text-emerald-400">Answer: A</code></p>
+              </div>
               
-              <h4 style={{ marginBottom: '5px' }}>4. Answer Key (End of Document)</h4>
-              <p style={{ margin: '0 0 10px 0' }}>You can provide an answer key section at the bottom of your text. It must be preceded by <code>Answers:</code>, <code>Key:</code>, or <code>Đáp án:</code>. Example: <br/><code>Answers:</code><br/><code>1. A 2. B 3. C</code></p>
+              <div className="bg-slate-900/50 border border-slate-700 p-4 rounded-xl">
+                <h4 className="font-bold text-amber-400 mb-2 flex items-center gap-2"><span className="bg-amber-500/20 px-2 py-0.5 rounded text-sm">4</span> Answer Key (End of Document)</h4>
+                <p className="m-0 text-sm">You can provide a bulk answer key section at the bottom. It must be preceded by <strong>Answers:</strong>, <strong>Key:</strong>, or <strong>Đáp án:</strong>.<br/><span className="text-slate-400">Example:</span><br/><code className="bg-slate-800 px-2 py-1 rounded text-emerald-400 block mt-2">Answers:<br/>1. A  2. B  3. C</code></p>
+              </div>
 
-              <h4 style={{ marginBottom: '5px' }}>5. Splitting Elements</h4>
-              <p style={{ margin: '0 0 10px 0' }}>
-                Text is attached sequentially to whatever block is currently active (a question text or an option). 
-                <strong> To break the block and stop appending text, press ENTER twice so that there is a blank line.</strong> Any unrecognized text after options without a blank line will still be attached, whereas text separated by a blank line will be safely discarded.
-              </p>
+              <div className="bg-slate-900/50 border border-slate-700 p-4 rounded-xl">
+                <h4 className="font-bold text-rose-400 mb-2 flex items-center gap-2"><span className="bg-rose-500/20 px-2 py-0.5 rounded text-sm">5</span> Splitting Elements</h4>
+                <p className="m-0 text-sm">
+                  Text is attached sequentially to whatever block is active. 
+                  <strong className="text-white block mt-2 mb-1 border-l-2 border-rose-500 pl-2">To hard-break and stop appending, press ENTER twice (leave a blank line).</strong> 
+                  Text separated by a blank line will be safely discarded if it's not a new question.
+                </p>
+              </div>
             </div>
 
-            <div style={{ marginTop: '20px', textAlign: 'right' }}>
+            <div className="mt-8 text-right border-t border-slate-700 pt-4">
               <button 
                 onClick={() => setShowHelp(false)} 
-                style={{ padding: '8px 16px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 font-bold text-white rounded-xl transition-all shadow-lg hover:shadow-blue-500/20"
               >
-                Close
+                Got it, Thanks!
               </button>
             </div>
           </div>
@@ -232,25 +273,46 @@ export default function Editor() {
 
       {/* Quiz Setup Modal */}
       {showSetup && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100
-        }}>
-          <div style={{
-            background: 'white', padding: '30px', borderRadius: '8px', maxWidth: '400px', width: '100%',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
-          }}>
-            <h2 style={{ marginTop: 0, color: '#333' }}>Quiz Setup</h2>
-            <p style={{ color: '#666', marginBottom: '20px' }}>
-              Mode: <strong>{setupMode === 'normal' ? 'Normal (Ordered)' : 'Shuffle Questions'}</strong>
-            </p>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[1100] p-4">
+          <div className="bg-slate-800 border border-slate-700 p-8 rounded-2xl max-w-md w-full shadow-2xl">
+            <div className="flex items-center gap-3 mb-6 border-b border-slate-700 pb-4">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-emerald-400 flex items-center justify-center text-xl">⚙️</div>
+              <h2 className="text-2xl font-bold text-white m-0">Quiz Setup</h2>
+            </div>
             
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#444' }}>Select Time Limit:</label>
+            <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700 mb-6">
+              <p className="text-slate-400 m-0 flex justify-between items-center">
+                <span>Selected Mode:</span>
+                <strong className={`px-3 py-1 rounded-lg text-sm ${setupMode === 'normal' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-purple-500/20 text-purple-400 border border-purple-500/30'}`}>
+                  {setupMode === 'normal' ? '📝 Normal (Ordered)' : '🔀 Shuffle Questions'}
+                </strong>
+              </p>
+            </div>
+            
+            {setupMode === 'shuffle' && (
+              <div className="mb-4">
+                <label className="block mb-3 font-bold text-slate-300">Question Limit:</label>
+                <select 
+                  value={questionLimitStr}
+                  onChange={(e) => setQuestionLimitStr(e.target.value)}
+                  className="w-full p-3 bg-slate-900 border border-slate-600 rounded-xl text-white font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
+                  style={{ backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem top 50%', backgroundSize: '0.65rem auto' }}
+                >
+                  <option value="all">Take All Questions ({parsedData.length})</option>
+                  {[5, 10, 15, 20, 25, 30, 40, 50].filter(n => n < parsedData.length).map(n => (
+                    <option key={n} value={n.toString()}>{n} Questions</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="mb-8">
+              <label className="block mb-3 font-bold text-slate-300">Set Time Limit:</label>
               <select 
                 value={timeLimitStr}
                 onChange={(e) => setTimeLimitStr(e.target.value)}
-                style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '16px' }}
+                className="w-full p-3 bg-slate-900 border border-slate-600 rounded-xl text-white font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
+                style={{ backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem top 50%', backgroundSize: '0.65rem auto' }}
               >
                 <option value="0">No Timer (Unlimited)</option>
                 <option value="300">5 Minutes</option>
@@ -261,25 +323,25 @@ export default function Editor() {
               </select>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div className="flex flex-col gap-3">
               <button 
                 onClick={handleSetupStart} 
                 disabled={isSaving}
-                style={{ padding: '12px 16px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                className="py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all flex justify-center items-center shadow-lg hover:shadow-blue-500/20"
               >
-                {isSaving ? 'Starting...' : 'Start Selection'}
+                {isSaving ? 'Starting...' : '🚀 Start Quiz Now'}
               </button>
               <button 
                 onClick={handleSetupSave} 
                 disabled={isSaving}
-                style={{ padding: '12px 16px', background: '#17a2b8', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                className="py-3 px-4 bg-slate-700 border border-slate-600 hover:bg-slate-600 text-white font-bold rounded-xl transition-all flex justify-center items-center"
               >
-                {isSaving ? 'Saving...' : 'Save to Drafts & Take Later'}
+                {isSaving ? 'Saving...' : '💾 Save Draft & Exit'}
               </button>
               <button 
                 onClick={() => setShowSetup(false)} 
                 disabled={isSaving}
-                style={{ padding: '8px 16px', background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: '4px', cursor: 'pointer', marginTop: '10px' }}
+                className="py-2 mt-2 text-slate-400 hover:text-white font-medium transition-colors"
               >
                 Cancel
               </button>
