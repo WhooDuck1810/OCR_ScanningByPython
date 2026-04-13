@@ -1,11 +1,19 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { shuffleQuiz } from '../utils/shuffle';
+import { API_BASE_URL } from '../config';
 const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLimit: propTimeLimit = 300 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { quizId: paramQuizId } = useParams();
   const quizId = propQuizId || paramQuizId || 'draft';
+  
+  const navState = location.state || {};
+  const activeQuizData = propQuizData || navState.quizData;
+  const activeTimeLimit = navState.timeLimit !== undefined ? navState.timeLimit : propTimeLimit;
+  const isShuffle = navState.isShuffle !== undefined ? navState.isShuffle : true; // Keep old behavior as default where it shuffles
+
   
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -30,21 +38,21 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
     const loadQuiz = async () => {
       setIsLoading(true);
       try {
-        if (propQuizData && propQuizData.questions) {
-          setQuestions(shuffleQuiz(propQuizData.questions));
-          setQuizName(propQuizData.name || 'Enhanced Quiz');
-          setTimeLeft(propTimeLimit);
+        if (activeQuizData && activeQuizData.questions) {
+          setQuestions(isShuffle ? shuffleQuiz(activeQuizData.questions) : activeQuizData.questions);
+          setQuizName(activeQuizData.name || 'Enhanced Quiz');
+          setTimeLeft(activeTimeLimit);
         } else if (quizId !== 'draft') {
-          const response = await axios.get(`http://localhost:8088/api/quizzes/${quizId}`);
-          setQuestions(shuffleQuiz(response.data.questions));
+          const response = await axios.get(`${API_BASE_URL}/api/quizzes/${quizId}`);
+          setQuestions(isShuffle ? shuffleQuiz(response.data.questions) : response.data.questions);
           setQuizName(response.data.name);
-          setTimeLeft(propTimeLimit);
+          setTimeLeft(activeTimeLimit);
         } else {
-          const response = await axios.get('http://localhost:8088/api/drafts/latest');
+          const response = await axios.get(`${API_BASE_URL}/api/drafts/latest`);
           if (response.data && response.data.parsed_data) {
-            setQuestions(shuffleQuiz(response.data.parsed_data));
+            setQuestions(isShuffle ? shuffleQuiz(response.data.parsed_data) : response.data.parsed_data);
             setQuizName('Draft Quiz');
-            setTimeLeft(propTimeLimit);
+            setTimeLeft(activeTimeLimit);
           }
         }
       } catch (error) {
@@ -54,7 +62,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
       }
     };
     loadQuiz();
-  }, [quizId, propQuizData, propTimeLimit]);
+  }, [quizId, activeQuizData, activeTimeLimit, isShuffle]);
 
   // Initialize quiz start time and load saved state
   useEffect(() => {
@@ -76,7 +84,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
       
       const initBackendTimer = async () => {
         try {
-          await axios.post('http://localhost:8088/api/quiz/init-timer', {
+          await axios.post(`${API_BASE_URL}/api/quiz/init-timer`, {
             quiz_id: quizId,
             time_limit: timeLeft,
             started_at: Date.now()
@@ -197,7 +205,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
 
       // Save to backend
       try {
-        await axios.post('http://localhost:8088/api/quiz/submit', submissionData);
+        await axios.post(`${API_BASE_URL}/api/quiz/submit`, submissionData);
         console.log('Backend submission successful');
       } catch (error) {
         console.error('Backend save failed, saving locally:', error);
@@ -213,6 +221,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
         percentage: percentage,
         timeTaken: timeTaken,
         isAutoSubmit,
+        questions: questions, // Added so we can Retake this specific layout
       });
       localStorage.setItem('quizHistory', JSON.stringify(history));
       
@@ -317,7 +326,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
         const elapsed = Math.floor((Date.now() - quizStartedAt) / 1000);
         const remaining = Math.max(0, propTimeLimit - elapsed);
         
-        axios.post('http://localhost:8088/api/quiz/sync-time', {
+        axios.post(`${API_BASE_URL}/api/quiz/sync-time`, {
           quiz_id: quizId,
           elapsed_time: elapsed,
           remaining_time: remaining,
@@ -444,7 +453,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
     const remaining = Math.max(0, propTimeLimit - elapsed);
     
     try {
-      const response = await axios.post('http://localhost:8088/api/quiz/validate-time', {
+      const response = await axios.post(`${API_BASE_URL}/api/quiz/validate-time`, {
         quiz_id: quizId,
         client_remaining: remaining,
         client_elapsed: elapsed,

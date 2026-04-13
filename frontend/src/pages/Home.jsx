@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Upload, FileText, Loader2, CheckCircle, AlertCircle, Trash2, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 function Home() {
   const [file, setFile] = useState(null);
@@ -8,16 +9,35 @@ function Home() {
   const [isScanning, setIsScanning] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [status, setStatus] = useState('idle'); // idle, uploading, scanning, success, error
+  const [errorMsg, setErrorMsg] = useState('');
+  const [geminiCooldown, setGeminiCooldown] = useState(0);
 
   const navigate = useNavigate();
 
+  React.useEffect(() => {
+    const checkCooldown = () => {
+      const allowedTime = localStorage.getItem('geminiAllowedTime');
+      if (allowedTime) {
+        const remaining = Math.ceil((parseInt(allowedTime, 10) - Date.now()) / 1000);
+        if (remaining > 0) {
+          setGeminiCooldown(remaining);
+        } else {
+          setGeminiCooldown(0);
+        }
+      }
+    };
+    checkCooldown();
+    const timer = setInterval(checkCooldown, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
-    if (selectedFile && selectedFile.type === 'application/pdf') {
+    if (selectedFile && (selectedFile.type === 'application/pdf' || selectedFile.name.endsWith('.docx'))) {
       setFile(selectedFile);
       setStatus('idle');
     } else {
-      alert('Please upload a PDF file.');
+      alert('Please upload a PDF or DOCX file.');
     }
   };
 
@@ -28,7 +48,7 @@ function Home() {
     setIsScanning(false);
   };
 
-  const handleUpload = async () => {
+  const handleUpload = async (useGemini = false) => {
     if (!file) return;
 
     setStatus('uploading');
@@ -37,14 +57,18 @@ function Home() {
     const formData = new FormData();
     formData.append('file', file);
 
+    const endpoint = useGemini ? `${API_BASE_URL}/api/upload-gemini` : `${API_BASE_URL}/api/upload`;
+
     try {
-      const response = await fetch('http://localhost:8088/api/upload', {
+      setErrorMsg('');
+      const response = await fetch(endpoint, {
         method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
-        throw new Error('Upload failed');
+        const errData = await response.json().catch(() => null);
+        throw new Error((errData && errData.detail) || `Upload failed with status ${response.status}`);
       }
 
       const data = await response.json();
@@ -52,9 +76,16 @@ function Home() {
       setStatus('success');
     } catch (error) {
       console.error('Error:', error);
+      setErrorMsg(error.message || 'Something went wrong.');
       setStatus('error');
     } finally {
       setIsScanning(false);
+      
+      // Enforce a strict 45-second cooldown for Gemini to avoid hitting 429 Rate Limits
+      if (useGemini) {
+        const nextAllowed = Date.now() + 45000;
+        localStorage.setItem('geminiAllowedTime', nextAllowed.toString());
+      }
     }
   };
 
@@ -63,7 +94,7 @@ function Home() {
 
     setIsGenerating(true);
     try {
-      const response = await fetch('http://localhost:8088/api/generate-quiz', {
+      const response = await fetch(`${API_BASE_URL}/api/generate-quiz`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -93,10 +124,10 @@ function Home() {
         {/* Header */}
         <header className="mb-12 text-center">
           <h1 className="text-5xl font-extrabold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent mb-4">
-            Quiz Generator
+            QuizAuto
           </h1>
           <p className="text-slate-400 text-lg">
-            Sprint 1: Transform your PDF documents into raw text for quiz generation.
+            Transform your PDF documents into interactive quizzes instantly.
           </p>
         </header>
 
@@ -112,14 +143,14 @@ function Home() {
               <div className="group relative border-2 border-dashed border-slate-600 hover:border-blue-500 rounded-xl p-8 transition-all cursor-pointer">
                 <input
                   type="file"
-                  accept=".pdf"
+                  accept=".pdf,.docx"
                   onChange={handleFileChange}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
                 <div className="text-center">
                   <FileText className="w-12 h-12 text-slate-500 group-hover:text-blue-400 mx-auto mb-4 transition-colors" />
                   <p className="text-slate-300 font-medium">Click to browse or drag & drop</p>
-                  <p className="text-slate-500 text-sm mt-2">Only PDF files accepted</p>
+                  <p className="text-slate-500 text-sm mt-2">PDF and DOCX files accepted</p>
                 </div>
               </div>
             ) : (
@@ -137,13 +168,28 @@ function Home() {
                   </button>
                 </div>
 
-                <button
-                  onClick={handleUpload}
-                  disabled={isScanning}
-                  className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 w-full"
-                >
-                  {isScanning ? <Loader2 className="animate-spin" /> : 'Start Scan'}
-                </button>
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => handleUpload(false)}
+                    disabled={isScanning}
+                    className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                  >
+                    {isScanning ? <Loader2 className="animate-spin" /> : 'Start Scan (PyMuPDF)'}
+                  </button>
+                  <button
+                    onClick={() => handleUpload(true)}
+                    disabled={isScanning || geminiCooldown > 0}
+                    className="flex-1 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                  >
+                    {isScanning ? (
+                      <><Loader2 className="animate-spin" /> Scanning...</>
+                    ) : geminiCooldown > 0 ? (
+                      `⏳ Wait ${geminiCooldown}s`
+                    ) : (
+                      '✨ Scan with Gemini AI'
+                    )}
+                  </button>
+                </div>
               </div>
             )}
 
@@ -160,8 +206,8 @@ function Home() {
                 </div>
               )}
               {status === 'error' && (
-                <div className="flex items-center gap-2 text-rose-400">
-                  <AlertCircle /> Something went wrong.
+                <div className="flex items-center gap-2 text-rose-400 p-2 bg-rose-500/10 rounded-lg border border-rose-500/20 text-sm font-medium">
+                  <AlertCircle /> <span>{errorMsg || 'Something went wrong.'}</span>
                 </div>
               )}
             </div>
@@ -187,23 +233,31 @@ function Home() {
               )}
             </div>
 
-            {/* Generate Quiz Button */}
+            {/* Actions for Extracted Text */}
             {extractedText && (
-              <button
-                onClick={handleGenerateQuiz}
-                disabled={isGenerating}
-                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="animate-spin" /> Generating Quiz...
-                  </>
-                ) : (
-                  <>
-                    Generate Quiz <ArrowRight className="w-5 h-5" />
-                  </>
-                )}
-              </button>
+              <div className="flex flex-col sm:flex-row gap-4 mt-4">
+                <button
+                  onClick={() => navigate('/editor', { state: { text: extractedText } })}
+                  className="flex-1 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-blue-500/20"
+                >
+                  Open in Editor
+                </button>
+                <button
+                  onClick={handleGenerateQuiz}
+                  disabled={isGenerating}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-emerald-500/20"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="animate-spin" /> Generating...
+                    </>
+                  ) : (
+                    <>
+                      Generate Basic Quiz <ArrowRight className="w-5 h-5" />
+                    </>
+                  )}
+                </button>
+              </div>
             )}
           </div>
         </div>

@@ -7,7 +7,7 @@ def extract_answer_key(raw_text: str) -> Dict[int, str]:
     ans_match = re.search(r'(?:Answers|Đáp án|Key)[\s:]*\n?(.*)', raw_text, re.IGNORECASE | re.DOTALL)
     if ans_match:
         ans_text = ans_match.group(1)
-        matches = re.finditer(r'(?:^|\s)(\d+)\s*[\.\)]\s*([A-Ga-g])(?:$|\s)', ans_text, re.IGNORECASE)
+        matches = re.finditer(r'\b(\d+)\s*[\.\)\-]?\s*([A-Ga-g])\b', ans_text, re.IGNORECASE)
         for m in matches:
             ans_key[int(m.group(1))] = m.group(2).upper()
     return ans_key
@@ -39,15 +39,19 @@ def parse_quiz_text(raw_text: str) -> List[Dict[str, Any]]:
     lines = raw_text.split('\n')
     
     # Regex patterns
-    q_pattern = re.compile(r'^\s*(?:Câu\s+|Question\s*)?(\d+)\s*[\.\):/]+\s*(.*)', re.IGNORECASE)
-    opt_pattern = re.compile(r'^\s*([A-Ga-g])[\.\)]\s+(.*)')
+    q_pattern = re.compile(r'^\s*(?:(?:Câu|Question)\s+(\d+)\s*[\.\):/]*\s*(.*)|(\d+)\s*[\.\):/]+\s*(.*))', re.IGNORECASE)
+    opt_pattern = re.compile(r'^\s*([A-Ga-g])(?:[\.\)]\s+(.*)|\s*$)')
     ans_pattern = re.compile(r'^\s*(?:Answer|Ans|Correct|Đáp án|Chọn|Giải)[\s:]*([A-Ga-g])', re.IGNORECASE)
     
+    can_append = False
     for line in lines:
-        line = line.strip()
-        if not line:
+        line_stripped = line.strip()
+        if not line_stripped:
+            can_append = False
             continue
             
+        line = line_stripped
+        
         q_match = q_pattern.match(line)
         if q_match:
             # Save previous question if exists
@@ -57,33 +61,36 @@ def parse_quiz_text(raw_text: str) -> List[Dict[str, Any]]:
                 questions.append(current_question)
                 
             current_question = {
-                "id": int(q_match.group(1)),
-                "question": q_match.group(2).strip(),
+                "id": int(q_match.group(1) or q_match.group(3)),
+                "question": (q_match.group(2) or q_match.group(4) or "").strip(),
                 "options": [],
                 "answer": ""
             }
+            can_append = True
             continue
             
         opt_match = opt_pattern.match(line)
         if opt_match and current_question is not None:
-            opt_text = opt_match.group(2).strip()
+            opt_text = (opt_match.group(2) or "").strip()
             current_question["options"].append(opt_text)
+            can_append = True
             continue
             
         ans_match = ans_pattern.match(line)
         if ans_match and current_question is not None:
             ans_letter = ans_match.group(1).upper()
             current_question["answer"] = ans_letter
+            can_append = False
             continue
             
         # If it doesn't match and we have a current question, append to question text or last option
-        if current_question:
+        if current_question and can_append:
             if not current_question["options"]:
                 # Append to question text
-                current_question["question"] += " " + line
+                current_question["question"] += "\n" + line
             else:
-                # Discard unrecognizable lines between questions that occur after options
-                pass
+                # Append to last option
+                current_question["options"][-1] += "\n" + line
 
     # Don't forget the last question
     if current_question and current_question.get("question") and current_question.get("options"):
@@ -104,8 +111,8 @@ def parse_quiz_text_advanced(raw_text: str) -> List[Dict[str, Any]]:
     
     answer_key = extract_answer_key(raw_text)
     
-    # Split by question numbers (Câu 1., 1., 1), 1: etc)
-    blocks = re.split(r'\n(?=(?:Câu\s+|Question\s*)?\d+\s*[\.\):/]+\s*)', raw_text, flags=re.IGNORECASE)
+    # Split by question numbers
+    blocks = re.split(r'\n(?=(?:(?:Câu|Question)\s+\d+\s*[\.\):/]*|(?:\d+)\s*[\.\):/]+)\s*)', raw_text, flags=re.IGNORECASE)
     
     for block in blocks:
         if not block.strip():
@@ -122,35 +129,40 @@ def parse_quiz_text_advanced(raw_text: str) -> List[Dict[str, Any]]:
         
         # Parse question number and text
         first_line = lines[0].strip()
-        q_match = re.match(r'^(?:Câu\s+|Question\s*)?(\d+)\s*[\.\):/]+\s*(.*)', first_line, re.IGNORECASE)
+        q_match = re.match(r'^(?:(?:Câu|Question)\s+(\d+)\s*[\.\):/]*\s*(.*)|(\d+)\s*[\.\):/]+\s*(.*))', first_line, re.IGNORECASE)
         if q_match:
-            question_data["id"] = int(q_match.group(1))
-            question_data["question"] = q_match.group(2)
+            question_data["id"] = int(q_match.group(1) or q_match.group(3))
+            question_data["question"] = (q_match.group(2) or q_match.group(4) or "").strip()
             lines = lines[1:]  # Remove first line
         
         # Parse options and answer
         options = []
+        can_append = True
         for line in lines:
-            line = line.strip()
-            if not line:
+            line_stripped = line.strip()
+            if not line_stripped:
+                can_append = False
                 continue
                 
+            line = line_stripped
+            
             # Check for answer line
             ans_match = re.match(r'^\s*(?:Answer|Ans|Correct|Đáp án|Chọn|Giải)[\s:]*([A-Ga-g])', line, re.IGNORECASE)
             if ans_match:
                 question_data["answer"] = ans_match.group(1).upper()
+                can_append = False
                 continue
             
             # Check for option line
-            opt_match = re.match(r'^\s*([A-Ga-g])[\.\)]\s+(.*)', line)
+            opt_match = re.match(r'^\s*([A-Ga-g])(?:[\.\)]\s+(.*)|\s*$)', line)
             if opt_match:
-                options.append(opt_match.group(2).strip())
-            elif options:
-                # Text separate on a new line after options is likely junk between questions, ignore it
-                pass
-            else:
+                options.append((opt_match.group(2) or "").strip())
+                can_append = True
+            elif options and can_append:
+                options[-1] += "\n" + line
+            elif not options and can_append:
                 # If no options found yet, append to question
-                question_data["question"] += " " + line
+                question_data["question"] += "\n" + line
         
         question_data["options"] = options
         
@@ -172,7 +184,7 @@ def validate_questions(questions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             continue
             
         # Clean up question text
-        q["question"] = " ".join(q["question"].split())
+        q["question"] = q["question"].strip()
         
         # Ensure options are properly formatted
         q["options"] = [opt.strip() for opt in q["options"] if opt.strip()]
