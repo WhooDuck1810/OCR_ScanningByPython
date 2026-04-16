@@ -7,7 +7,7 @@ import uuid
 from typing import List, Optional
 from datetime import datetime
 import time
-import google.generativeai as genai
+#import google.generativeai as genai
 
 import fitz  # PyMuPDF
 from pymongo import ReturnDocument

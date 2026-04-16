@@ -1,20 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
-import { shuffleQuiz } from '../utils/shuffle';
-import { API_BASE_URL } from '../config';
+
 const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLimit: propTimeLimit = 300 }) => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { quizId: paramQuizId } = useParams();
   const quizId = propQuizId || paramQuizId || 'draft';
-  
-  const navState = location.state || {};
-  const activeQuizData = propQuizData || navState.quizData;
-  const activeTimeLimit = navState.timeLimit !== undefined ? navState.timeLimit : propTimeLimit;
-  const isShuffle = navState.isShuffle !== undefined ? navState.isShuffle : true; // Keep old behavior as default where it shuffles
 
-  
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -27,7 +19,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
   const [showSidebar, setShowSidebar] = useState(true);
   const [quizName, setQuizName] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const timerRef = useRef(null);
   const autoSubmitTriggered = useRef(false);
   const syncIntervalRef = useRef(null);
@@ -38,21 +30,21 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
     const loadQuiz = async () => {
       setIsLoading(true);
       try {
-        if (activeQuizData && activeQuizData.questions) {
-          setQuestions(isShuffle ? shuffleQuiz(activeQuizData.questions) : activeQuizData.questions);
-          setQuizName(activeQuizData.name || 'Enhanced Quiz');
-          setTimeLeft(activeTimeLimit);
+        if (propQuizData && propQuizData.questions) {
+          setQuestions(propQuizData.questions);
+          setQuizName(propQuizData.name || 'Enhanced Quiz');
+          setTimeLeft(propTimeLimit);
         } else if (quizId !== 'draft') {
-          const response = await axios.get(`${API_BASE_URL}/api/quizzes/${quizId}`);
-          setQuestions(isShuffle ? shuffleQuiz(response.data.questions) : response.data.questions);
+          const response = await axios.get(`http://localhost:8088/api/quizzes/${quizId}`);
+          setQuestions(response.data.questions);
           setQuizName(response.data.name);
-          setTimeLeft(activeTimeLimit);
+          setTimeLeft(propTimeLimit);
         } else {
-          const response = await axios.get(`${API_BASE_URL}/api/drafts/latest`);
+          const response = await axios.get('http://localhost:8088/api/drafts/latest');
           if (response.data && response.data.parsed_data) {
-            setQuestions(isShuffle ? shuffleQuiz(response.data.parsed_data) : response.data.parsed_data);
+            setQuestions(response.data.parsed_data);
             setQuizName('Draft Quiz');
-            setTimeLeft(activeTimeLimit);
+            setTimeLeft(propTimeLimit);
           }
         }
       } catch (error) {
@@ -62,8 +54,22 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
       }
     };
     loadQuiz();
-  }, [quizId, activeQuizData, activeTimeLimit, isShuffle]);
-
+  }, [quizId, propQuizData, propTimeLimit]);
+  // After setQuestions, add this debug code
+  useEffect(() => {
+    if (questions.length > 0) {
+      console.log('=== QUIZ DATA DEBUG ===');
+      questions.forEach((q, idx) => {
+        console.log(`Q${idx + 1}:`, {
+          question: q.question,
+          answer: q.answer,
+          correct_answer: q.correct_answer,
+          options: q.options,
+          hasAnswer: !!(q.answer || q.correct_answer)
+        });
+      });
+    }
+  }, [questions]);
   // Initialize quiz start time and load saved state
   useEffect(() => {
     if (questions.length > 0 && !quizStartedAt && !isSubmitted && !isLoading) {
@@ -81,10 +87,10 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
         }
       }
       setQuizStartedAt(Date.now());
-      
+
       const initBackendTimer = async () => {
         try {
-          await axios.post(`${API_BASE_URL}/api/quiz/init-timer`, {
+          await axios.post('http://localhost:8088/api/quiz/init-timer', {
             quiz_id: quizId,
             time_limit: timeLeft,
             started_at: Date.now()
@@ -100,35 +106,29 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
   // HELPER FUNCTION: Check if answer is correct
   const isAnswerCorrect = useCallback((question, userAnswer) => {
     if (!userAnswer || !question) return false;
-    
-    // Get the correct answer from question
+
     let correctAnswer = question.answer || question.correct_answer;
-    
-    // If correctAnswer is a letter (A, B, C, D), get the actual option text
+
     if (correctAnswer && /^[A-Da-d]$/.test(correctAnswer)) {
       const optionIndex = correctAnswer.toUpperCase().charCodeAt(0) - 65;
       if (question.options && question.options[optionIndex]) {
         correctAnswer = question.options[optionIndex];
       }
     }
-    
-    // Trim and compare case-insensitively
+
     const normalizedUserAnswer = String(userAnswer).trim().toLowerCase();
     const normalizedCorrectAnswer = String(correctAnswer).trim().toLowerCase();
-    
-    // Direct comparison
+
     if (normalizedUserAnswer === normalizedCorrectAnswer) {
       return true;
     }
-    
-    // Check if user selected the option text that matches
+
     if (question.options) {
       for (let i = 0; i < question.options.length; i++) {
         const optionText = question.options[i].trim().toLowerCase();
         if (normalizedUserAnswer === optionText && optionText === normalizedCorrectAnswer) {
           return true;
         }
-        // Also check if userAnswer is a letter and matches the correct answer letter
         if (/^[A-Da-d]$/.test(normalizedUserAnswer)) {
           const letterIndex = normalizedUserAnswer.toUpperCase().charCodeAt(0) - 65;
           if (question.options[letterIndex] && question.options[letterIndex].trim().toLowerCase() === normalizedCorrectAnswer) {
@@ -137,35 +137,26 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
         }
       }
     }
-    
+
     return false;
   }, []);
 
-  // DEFINE submitQuiz FIRST
+  // DEFINE submitQuiz
   const submitQuiz = useCallback(async (isAutoSubmit = false) => {
     if (isSubmitted) return;
-    
+
     console.log('submitQuiz called:', { isAutoSubmit, isSubmitted });
-    console.log('User Answers:', answers);
-    console.log('Questions:', questions);
-    
+
     setSubmissionStatus('submitting');
-    
+
     try {
-      // Calculate score with improved logic
       let score = 0;
       const results = questions.map((q, idx) => {
         const userAnswer = answers[idx];
         const isCorrect = isAnswerCorrect(q, userAnswer);
-        
-        if (isCorrect) {
-          score++;
-          console.log(`Question ${idx + 1}: CORRECT - User: "${userAnswer}"`);
-        } else {
-          console.log(`Question ${idx + 1}: INCORRECT - User: "${userAnswer}", Correct: "${q.answer || q.correct_answer}"`);
-        }
-        
-        // Get the correct answer text for display
+
+        if (isCorrect) score++;
+
         let correctAnswerText = q.answer || q.correct_answer;
         if (correctAnswerText && /^[A-Da-d]$/.test(correctAnswerText)) {
           const optionIndex = correctAnswerText.toUpperCase().charCodeAt(0) - 65;
@@ -173,7 +164,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
             correctAnswerText = q.options[optionIndex];
           }
         }
-        
+
         return {
           questionId: q.id || idx,
           question: q.question,
@@ -185,9 +176,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
 
       const timeTaken = propTimeLimit - timeLeft;
       const percentage = (score / questions.length) * 100;
-      
-      console.log(`Final Score: ${score}/${questions.length} (${percentage}%)`);
-      
+
       const submissionData = {
         quiz_id: quizId,
         quiz_name: quizName,
@@ -203,15 +192,13 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
         time_remaining: timeLeft,
       };
 
-      // Save to backend
       try {
-        await axios.post(`${API_BASE_URL}/api/quiz/submit`, submissionData);
+        await axios.post('http://localhost:8088/api/quiz/submit', submissionData);
         console.log('Backend submission successful');
       } catch (error) {
         console.error('Backend save failed, saving locally:', error);
       }
 
-      // Save to localStorage for dashboard
       const history = JSON.parse(localStorage.getItem('quizHistory') || '[]');
       history.push({
         date: new Date().toLocaleString(),
@@ -221,21 +208,18 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
         percentage: percentage,
         timeTaken: timeTaken,
         isAutoSubmit,
-        questions: questions, // Added so we can Retake this specific layout
       });
       localStorage.setItem('quizHistory', JSON.stringify(history));
-      
-      // Clear saved state
+
       localStorage.removeItem(`enhanced_quiz_state_${quizId}`);
-      
+
       setIsSubmitted(true);
       setSubmissionStatus('success');
-      
-      // Navigate to results page
+
       setTimeout(() => {
         navigate('/enhanced-results', { state: { results: submissionData, questions } });
       }, 1500);
-      
+
     } catch (error) {
       console.error('Error submitting quiz:', error);
       setSubmissionStatus('error');
@@ -245,23 +229,22 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
     }
   }, [answers, questions, quizId, quizName, propTimeLimit, timeLeft, isSubmitted, navigate, isAnswerCorrect]);
 
-  // DEFINE handleAutoSubmit AFTER submitQuiz
+  // DEFINE handleAutoSubmit
   const handleAutoSubmit = useCallback(() => {
-    console.log('handleAutoSubmit called', { 
-      autoSubmitTriggered: autoSubmitTriggered.current, 
+    console.log('handleAutoSubmit called', {
+      autoSubmitTriggered: autoSubmitTriggered.current,
       isSubmitted,
-      timeLeft 
+      timeLeft
     });
-    
+
     if (autoSubmitTriggered.current || isSubmitted) {
       console.log('Auto-submit already triggered or quiz submitted');
       return;
     }
-    
+
     autoSubmitTriggered.current = true;
     setIsTimeUp(true);
-    
-    // Clear intervals
+
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
@@ -270,37 +253,33 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
       clearInterval(syncIntervalRef.current);
       syncIntervalRef.current = null;
     }
-    
+
     setSubmissionStatus('submitting');
-    
+
     alert('⏰ Time is up! Your quiz will be submitted automatically.');
-    
+
     submitQuiz(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSubmitted, submitQuiz]);
 
-  // Timer effect - ONLY runs once
+  // Timer effect
   useEffect(() => {
     if (isSubmitted || isTimeUp || !quizStartedAt || questions.length === 0 || isLoading) {
       return;
     }
-    
-    // Only start timer once
+
     if (timerStartedRef.current) {
       return;
     }
-    
+
     timerStartedRef.current = true;
     console.log('Starting timer ONCE with timeLeft:', timeLeft);
 
-    // Frontend timer
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
         const newTime = prev - 1;
-        
+
         if (prev <= 1) {
           console.log('!!! TIME REACHED ZERO - TRIGGERING AUTO-SUBMIT !!!');
-          // Clear intervals immediately
           if (timerRef.current) {
             clearInterval(timerRef.current);
             timerRef.current = null;
@@ -309,8 +288,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
             clearInterval(syncIntervalRef.current);
             syncIntervalRef.current = null;
           }
-          
-          // Trigger auto-submit
+
           if (!autoSubmitTriggered.current && !isSubmitted) {
             handleAutoSubmit();
           }
@@ -320,13 +298,12 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
       });
     }, 1000);
 
-    // Sync with backend every 15 seconds
     syncIntervalRef.current = setInterval(() => {
       if (!isSubmitted && !isTimeUp && quizStartedAt && timerRef.current) {
         const elapsed = Math.floor((Date.now() - quizStartedAt) / 1000);
         const remaining = Math.max(0, propTimeLimit - elapsed);
-        
-        axios.post(`${API_BASE_URL}/api/quiz/sync-time`, {
+
+        axios.post('http://localhost:8088/api/quiz/sync-time', {
           quiz_id: quizId,
           elapsed_time: elapsed,
           remaining_time: remaining,
@@ -337,7 +314,6 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
       }
     }, 15000);
 
-    // Cleanup on unmount only
     return () => {
       console.log('Cleanup: clearing intervals');
       if (timerRef.current) {
@@ -349,14 +325,13 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
         syncIntervalRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quizStartedAt]);
 
-  // Backup trigger - watches timeLeft for when it reaches 0
+  // Backup trigger
   useEffect(() => {
     if (timeLeft <= 0 && !isSubmitted && !isTimeUp && !autoSubmitTriggered.current && quizStartedAt) {
       console.log('!!! BACKUP TRIGGER: timeLeft <= 0 !!!');
-      
+
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -365,12 +340,12 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
         clearInterval(syncIntervalRef.current);
         syncIntervalRef.current = null;
       }
-      
+
       handleAutoSubmit();
     }
   }, [timeLeft, isSubmitted, isTimeUp, quizStartedAt, handleAutoSubmit]);
 
-  // Auto-save answers to localStorage
+  // Auto-save answers
   useEffect(() => {
     if (quizStartedAt && !isSubmitted && !isTimeUp && questions.length > 0 && !isLoading) {
       const saveState = {
@@ -398,17 +373,10 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
 
   const handleAnswerSelect = (answer) => {
     console.log(`Selected answer for Q${currentIndex + 1}:`, answer);
-    setAnswers((prev) => {
-      if (prev[currentIndex] === answer) {
-        const newAnswers = { ...prev };
-        delete newAnswers[currentIndex];
-        return newAnswers;
-      }
-      return {
-        ...prev,
-        [currentIndex]: answer,
-      };
-    });
+    setAnswers((prev) => ({
+      ...prev,
+      [currentIndex]: answer,
+    }));
     if (markedForReview[currentIndex]) {
       setMarkedForReview((prev) => ({
         ...prev,
@@ -448,18 +416,18 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
 
   const handleManualTimeSync = async () => {
     if (!quizStartedAt) return;
-    
+
     const elapsed = Math.floor((Date.now() - quizStartedAt) / 1000);
     const remaining = Math.max(0, propTimeLimit - elapsed);
-    
+
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/quiz/validate-time`, {
+      const response = await axios.post('http://localhost:8088/api/quiz/validate-time', {
         quiz_id: quizId,
         client_remaining: remaining,
         client_elapsed: elapsed,
         timestamp: Date.now()
       });
-      
+
       if (!response.data.is_valid && response.data.server_remaining) {
         setTimeLeft(response.data.server_remaining);
         alert(`Time synced with server. Remaining: ${formatTime(response.data.server_remaining)}`);
@@ -537,7 +505,6 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
 
   return (
     <div style={styles.container}>
-      {/* Top Timer Bar */}
       <div style={styles.timerBar}>
         <div style={styles.timerBarContent}>
           <div style={styles.leftSection}>
@@ -552,20 +519,20 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
               </div>
             </div>
           </div>
-          
+
           <div style={styles.timerSection}>
             <div style={styles.timerLabel}>Time Remaining</div>
-            <div style={{...styles.timerValue, color: getTimerColor()}}>
+            <div style={{ ...styles.timerValue, color: getTimerColor() }}>
               {formatTime(timeLeft)}
             </div>
             <button onClick={handleManualTimeSync} style={styles.syncButton} title="Sync with server">
               🔄
             </button>
-            <button onClick={testAutoSubmit} style={{...styles.syncButton, background: '#ef4444', marginLeft: '5px'}} title="Test Auto-Submit">
+            <button onClick={testAutoSubmit} style={{ ...styles.syncButton, background: '#ef4444', marginLeft: '5px' }} title="Test Auto-Submit">
               ⏰ Test
             </button>
           </div>
-          
+
           <button onClick={() => {
             if (window.confirm(`Are you sure you want to submit the quiz?\n\nAnswered: ${answeredCount}/${questions.length}\nMarked for review: ${markedCount}`)) {
               submitQuiz(false);
@@ -574,15 +541,13 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
             Submit Quiz
           </button>
         </div>
-        
-        {/* Timer Progress Bar */}
+
         <div style={styles.timerProgressBar}>
-          <div style={{...styles.timerProgressFill, width: `${(timeLeft / propTimeLimit) * 100}%`, backgroundColor: getTimerColor()}} />
+          <div style={{ ...styles.timerProgressFill, width: `${(timeLeft / propTimeLimit) * 100}%`, backgroundColor: getTimerColor() }} />
         </div>
       </div>
 
-      <div style={{...styles.mainContainer, marginLeft: showSidebar ? '320px' : '0'}}>
-        {/* Question Map Sidebar */}
+      <div style={{ ...styles.mainContainer, marginLeft: showSidebar ? '320px' : '0' }}>
         {showSidebar && (
           <div style={styles.sidebar}>
             <div style={styles.sidebarHeader}>
@@ -593,7 +558,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
                   <span>Answered ({answeredCount})</span>
                 </div>
                 <div style={styles.statItem}>
-                  <span style={{color: '#f59e0b', fontSize: '14px'}}>★</span>
+                  <span style={styles.statDotMarked}></span>
                   <span>Marked ({markedCount})</span>
                 </div>
                 <div style={styles.statItem}>
@@ -602,26 +567,19 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
                 </div>
               </div>
             </div>
-            
+
             <div style={styles.questionGrid}>
               {questions.map((_, idx) => {
                 const status = getQuestionStatus(idx);
-                let buttonStyle = {...styles.questionGridButton};
-                if (status === 'answered') buttonStyle = {...buttonStyle, ...styles.questionGridButtonAnswered};
-                if (status === 'marked') buttonStyle = {...buttonStyle, ...styles.questionGridButtonMarked};
-                if (currentIndex === idx) buttonStyle = {...buttonStyle, ...styles.questionGridButtonCurrent};
-                
+                let buttonStyle = { ...styles.questionGridButton };
+                if (status === 'answered') buttonStyle = { ...buttonStyle, ...styles.questionGridButtonAnswered };
+                if (status === 'marked') buttonStyle = { ...buttonStyle, ...styles.questionGridButtonMarked };
+                if (currentIndex === idx) buttonStyle = { ...buttonStyle, ...styles.questionGridButtonCurrent };
+
                 let statusIcon = '';
-                let iconStyle = styles.questionStatusIcon;
-                
-                if (status === 'answered') {
-                  statusIcon = '✓';
-                }
-                if (status === 'marked') {
-                  statusIcon = '★';
-                  iconStyle = { ...styles.questionStatusIcon, right: 'auto', left: '4px', top: '2px', bottom: 'auto', fontSize: '12px', color: 'white' };
-                }
-                
+                if (status === 'answered') statusIcon = '✓';
+                if (status === 'marked') statusIcon = '🏷️';
+
                 return (
                   <button
                     key={idx}
@@ -630,12 +588,12 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
                     title={`Question ${idx + 1}: ${status}`}
                   >
                     {idx + 1}
-                    {statusIcon && <span style={iconStyle}>{statusIcon}</span>}
+                    {statusIcon && <span style={styles.questionStatusIcon}>{statusIcon}</span>}
                   </button>
                 );
               })}
             </div>
-            
+
             <div style={styles.sidebarFooter}>
               <button onClick={() => jumpToQuestion(0)} style={styles.sidebarNavButton}>
                 ⏮ First
@@ -647,7 +605,6 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
           </div>
         )}
 
-        {/* Main Question Area */}
         <div style={styles.questionArea}>
           <div style={styles.questionCard}>
             <div style={styles.questionHeader}>
@@ -673,7 +630,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
               {currentQuestion.options && currentQuestion.options.map((option, idx) => {
                 const isSelected = answers[currentIndex] === option;
                 const optionLetter = String.fromCharCode(65 + idx);
-                
+
                 return (
                   <div
                     key={idx}
@@ -704,11 +661,11 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
               >
                 ← Previous
               </button>
-              
+
               <div style={styles.navigationInfo}>
                 {answers[currentIndex] ? '✓ Answered' : '◯ Not Answered'}
               </div>
-              
+
               <button
                 onClick={goToNext}
                 disabled={currentIndex === questions.length - 1}
@@ -726,7 +683,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
 
           <div style={styles.progressOverview}>
             <div style={styles.progressBarContainer}>
-              <div style={{...styles.progressBarFill, width: `${progressPercentage}%`}} />
+              <div style={{ ...styles.progressBarFill, width: `${progressPercentage}%` }} />
             </div>
             <div style={styles.progressText}>
               Overall Progress: {answeredCount} of {questions.length} questions answered ({Math.round(progressPercentage)}%)
