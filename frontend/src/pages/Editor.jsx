@@ -11,8 +11,9 @@ export default function Editor() {
   const [showHelp, setShowHelp] = useState(false);
   const [showSetup, setShowSetup] = useState(false);
   const [setupMode, setSetupMode] = useState('normal'); // 'normal' or 'shuffle'
-  const [timeLimitStr, setTimeLimitStr] = useState('300'); // '0' means no timer, '300' is 5 minutes
-  const [questionLimitStr, setQuestionLimitStr] = useState('all'); // 'all', '10', '20', etc.
+  const [timeLimitStr, setTimeLimitStr] = useState('300');
+  const [questionLimitStr, setQuestionLimitStr] = useState('all');
+  const [shuffleAnswers, setShuffleAnswers] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -87,15 +88,15 @@ export default function Editor() {
         }
       }
 
-      // We pass the settings to `/enhanced-quiz`, keeping the logic compatible
       navigate('/enhanced-quiz', {
         state: {
           quizData: {
             name: "Quiz Draft",
             questions: finalQuestions
           },
-          timeLimit: tl > 0 ? tl : 999999, // If no timer, arbitrarily large or handled by enhanced-quiz logic properly
-          isShuffle: isShuffle
+          timeLimit: tl > 0 ? tl : 999999,
+          isShuffle: isShuffle,
+          isShuffleAnswers: shuffleAnswers
         }
       });
     } catch (err) {
@@ -307,7 +308,7 @@ export default function Editor() {
               </div>
             )}
 
-            <div className="mb-8">
+            <div className="mb-6">
               <label className="block mb-3 font-bold text-slate-300">Set Time Limit:</label>
               <select 
                 value={timeLimitStr}
@@ -322,6 +323,21 @@ export default function Editor() {
                 <option value="1800">30 Minutes</option>
                 <option value="3600">60 Minutes</option>
               </select>
+            </div>
+
+            <div className="mb-8">
+              <label
+                className="flex items-center gap-3 cursor-pointer select-none p-3 bg-slate-900/50 border border-slate-700 rounded-xl hover:border-slate-600 transition-colors"
+                onClick={() => setShuffleAnswers(!shuffleAnswers)}
+              >
+                <div className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-colors ${shuffleAnswers ? 'bg-amber-500 border-amber-500' : 'border-slate-500 bg-transparent'}`}>
+                  {shuffleAnswers && <span className="text-white text-xs font-bold">✓</span>}
+                </div>
+                <div>
+                  <span className="font-bold text-slate-200">🔀 Shuffle Answer Choices</span>
+                  <p className="text-xs text-slate-400 m-0 mt-0.5">Randomize the order of options within each question</p>
+                </div>
+              </label>
             </div>
 
             <div className="flex flex-col gap-3">

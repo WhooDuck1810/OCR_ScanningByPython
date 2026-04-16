@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const EnhancedResults = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { results } = location.state || {};
+  const { results, originalQuestions, quizName: passedQuizName, timeLimit: passedTimeLimit } = location.state || {};
+  const [retakeShuffleAnswers, setRetakeShuffleAnswers] = useState(true);
 
   if (!results) {
     return (
@@ -46,6 +47,22 @@ const EnhancedResults = () => {
     if (percentage >= 60) return '👍 Good job! Keep practicing to improve further.';
     if (percentage >= 40) return '📚 Good effort! Review the material and try again.';
     return '💪 Keep learning! Review the material thoroughly and try again.';
+  };
+
+  const canRetake = originalQuestions && originalQuestions.length > 0;
+
+  const handleRetake = (shuffle) => {
+    navigate('/enhanced-quiz', {
+      state: {
+        quizData: {
+          name: passedQuizName || results.quiz_name || 'Retake Quiz',
+          questions: originalQuestions,
+        },
+        timeLimit: passedTimeLimit || results.time_limit || 300,
+        isShuffle: shuffle,
+        isShuffleAnswers: retakeShuffleAnswers,
+      }
+    });
   };
 
   return (
@@ -116,6 +133,33 @@ const EnhancedResults = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {canRetake && (
+          <div style={styles.retakeSection}>
+            <h3 style={styles.retakeSectionTitle}>Retake This Quiz</h3>
+            <label
+              onClick={() => setRetakeShuffleAnswers(!retakeShuffleAnswers)}
+              style={styles.shuffleAnswersToggle}
+            >
+              <div style={{
+                ...styles.toggleCheckbox,
+                backgroundColor: retakeShuffleAnswers ? '#f59e0b' : 'transparent',
+                borderColor: retakeShuffleAnswers ? '#f59e0b' : '#475569',
+              }}>
+                {retakeShuffleAnswers && <span style={{ color: '#0f172a', fontSize: '11px', fontWeight: 'bold' }}>✓</span>}
+              </div>
+              <span style={{ color: '#cbd5e1', fontSize: '14px' }}>🔀 Shuffle answer choices</span>
+            </label>
+            <div style={styles.retakeButtonGroup}>
+              <button onClick={() => handleRetake(true)} style={styles.retakeShuffleButton}>
+                🔀 Retake & Shuffle Questions
+              </button>
+              <button onClick={() => handleRetake(false)} style={styles.retakeSameButton}>
+                🔁 Retake Same Order
+              </button>
             </div>
           </div>
         )}
@@ -281,6 +325,73 @@ const styles = {
   },
   correctAnswer: {
     color: '#10b981',
+  },
+  retakeSection: {
+    marginBottom: '24px',
+    padding: '24px',
+    backgroundColor: '#0f172a',
+    borderRadius: '12px',
+    border: '1px solid #334155',
+  },
+  retakeSectionTitle: {
+    fontSize: '16px',
+    fontWeight: '600',
+    color: '#94a3b8',
+    marginBottom: '16px',
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  },
+  shuffleAnswersToggle: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    cursor: 'pointer',
+    userSelect: 'none',
+    padding: '10px 14px',
+    backgroundColor: '#1e293b',
+    borderRadius: '8px',
+    border: '1px solid #334155',
+    marginBottom: '14px',
+  },
+  toggleCheckbox: {
+    width: '18px',
+    height: '18px',
+    borderRadius: '4px',
+    border: '2px solid #475569',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    transition: 'all 0.2s',
+  },
+  retakeButtonGroup: {
+    display: 'flex',
+    gap: '12px',
+  },
+  retakeShuffleButton: {
+    flex: 1,
+    padding: '14px 24px',
+    backgroundColor: '#8b5cf6',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '16px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
+  },
+  retakeSameButton: {
+    flex: 1,
+    padding: '14px 24px',
+    backgroundColor: '#0ea5e9',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '16px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
   },
   buttonGroup: {
     display: 'flex',
