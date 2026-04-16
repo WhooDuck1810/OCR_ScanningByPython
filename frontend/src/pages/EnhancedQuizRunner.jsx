@@ -12,10 +12,12 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
   const navState = location.state || {};
   const activeQuizData = propQuizData || navState.quizData;
   const activeTimeLimit = navState.timeLimit !== undefined ? navState.timeLimit : propTimeLimit;
-  const isShuffle = navState.isShuffle !== undefined ? navState.isShuffle : true; // Keep old behavior as default where it shuffles
+  const isShuffle = navState.isShuffle !== undefined ? navState.isShuffle : true;
+  const isShuffleAnswers = navState.isShuffleAnswers !== undefined ? navState.isShuffleAnswers : isShuffle;
 
   
   const [questions, setQuestions] = useState([]);
+  const [originalQuestions, setOriginalQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [markedForReview, setMarkedForReview] = useState({});
@@ -37,20 +39,30 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
   useEffect(() => {
     const loadQuiz = async () => {
       setIsLoading(true);
+      const applyShuffles = (qs) => {
+        if (isShuffle || isShuffleAnswers) {
+          return shuffleQuiz(qs, { shuffleQuestions: isShuffle, shuffleAnswers: isShuffleAnswers });
+        }
+        return qs;
+      };
+
       try {
         if (activeQuizData && activeQuizData.questions) {
-          setQuestions(isShuffle ? shuffleQuiz(activeQuizData.questions) : activeQuizData.questions);
+          setOriginalQuestions(activeQuizData.questions);
+          setQuestions(applyShuffles(activeQuizData.questions));
           setQuizName(activeQuizData.name || 'Enhanced Quiz');
           setTimeLeft(activeTimeLimit);
         } else if (quizId !== 'draft') {
           const response = await axios.get(`${API_BASE_URL}/api/quizzes/${quizId}`);
-          setQuestions(isShuffle ? shuffleQuiz(response.data.questions) : response.data.questions);
+          setOriginalQuestions(response.data.questions);
+          setQuestions(applyShuffles(response.data.questions));
           setQuizName(response.data.name);
           setTimeLeft(activeTimeLimit);
         } else {
           const response = await axios.get(`${API_BASE_URL}/api/drafts/latest`);
           if (response.data && response.data.parsed_data) {
-            setQuestions(isShuffle ? shuffleQuiz(response.data.parsed_data) : response.data.parsed_data);
+            setOriginalQuestions(response.data.parsed_data);
+            setQuestions(applyShuffles(response.data.parsed_data));
             setQuizName('Draft Quiz');
             setTimeLeft(activeTimeLimit);
           }
@@ -62,7 +74,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
       }
     };
     loadQuiz();
-  }, [quizId, activeQuizData, activeTimeLimit, isShuffle]);
+  }, [quizId, activeQuizData, activeTimeLimit, isShuffle, isShuffleAnswers]);
 
   // Initialize quiz start time and load saved state
   useEffect(() => {
@@ -231,9 +243,17 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
       setIsSubmitted(true);
       setSubmissionStatus('success');
       
-      // Navigate to results page
+      // Navigate to results page with original questions for retake
       setTimeout(() => {
-        navigate('/enhanced-results', { state: { results: submissionData, questions } });
+        navigate('/enhanced-results', {
+          state: {
+            results: submissionData,
+            questions,
+            originalQuestions,
+            quizName,
+            timeLimit: propTimeLimit,
+          }
+        });
       }, 1500);
       
     } catch (error) {
@@ -243,7 +263,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
         alert('Failed to submit quiz. Please try again.');
       }
     }
-  }, [answers, questions, quizId, quizName, propTimeLimit, timeLeft, isSubmitted, navigate, isAnswerCorrect]);
+  }, [answers, questions, originalQuestions, quizId, quizName, propTimeLimit, timeLeft, isSubmitted, navigate, isAnswerCorrect]);
 
   // DEFINE handleAutoSubmit AFTER submitQuiz
   const handleAutoSubmit = useCallback(() => {

@@ -6,14 +6,18 @@ import { API_BASE_URL } from '../config';
 
 export default function Runner() {
   const [questions, setQuestions] = useState([]);
+  const [originalQuestions, setOriginalQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [isFinished, setIsFinished] = useState(false);
+  const [score, setScore] = useState(0);
+  const [shuffleAnswersOn, setShuffleAnswersOn] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     axios.get(`${API_BASE_URL}/api/drafts/latest`).then(res => {
       if (res.data && res.data.parsed_data) {
+        setOriginalQuestions(res.data.parsed_data);
         setQuestions(shuffleQuiz(res.data.parsed_data));
       }
     }).catch(err => console.error("Error loading quiz", err));
@@ -30,32 +34,66 @@ export default function Runner() {
       setCurrentIndex(currentIndex + 1);
     } else {
       setIsFinished(true);
-      // Save result to localStorage for Dashboard
-      let score = 0;
+      let finalScore = 0;
       questions.forEach((q, i) => {
-        // Simple mock check
         const isCorrect = selectedAnswers[i] && selectedAnswers[i].startsWith(q.answer);
-        if (isCorrect) score++;
+        if (isCorrect) finalScore++;
       });
+      setScore(finalScore);
       const history = JSON.parse(localStorage.getItem('quizHistory') || '[]');
       history.push({
         date: new Date().toLocaleDateString(),
         quizName: 'Sprint 2 Quiz',
-        score: score,
-        total: questions.length
+        score: finalScore,
+        total: questions.length,
+        questions: originalQuestions,
       });
       localStorage.setItem('quizHistory', JSON.stringify(history));
     }
   };
 
+  const handleRetake = (shuffleQs) => {
+    setQuestions(shuffleQuiz(originalQuestions, { shuffleQuestions: shuffleQs, shuffleAnswers: shuffleAnswersOn }));
+    setCurrentIndex(0);
+    setSelectedAnswers({});
+    setIsFinished(false);
+    setScore(0);
+  };
+
   if (!questions.length) return <div style={{ padding: '20px' }}>Loading question data...</div>;
 
   if (isFinished) {
+    const pct = Math.round((score / questions.length) * 100);
     return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
-        <h2>Quiz Complete!</h2>
-        <p>Check the Dashboard to see your results.</p>
-        <button onClick={() => navigate('/dashboard')} style={{ padding: '10px 20px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Go to Dashboard</button>
+      <div style={{ maxWidth: '500px', margin: '40px auto', padding: '30px', textAlign: 'center', border: '1px solid #e1e4e8', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+        <h2 style={{ marginBottom: '8px' }}>Quiz Complete!</h2>
+        <p style={{ fontSize: '36px', fontWeight: 'bold', color: pct >= 70 ? '#28a745' : pct >= 40 ? '#f59e0b' : '#ef4444', margin: '16px 0 4px' }}>
+          {score} / {questions.length}
+        </p>
+        <p style={{ color: '#666', marginBottom: '24px' }}>{pct}% correct</p>
+
+        <label
+          onClick={() => setShuffleAnswersOn(!shuffleAnswersOn)}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', cursor: 'pointer', userSelect: 'none', marginBottom: '14px', padding: '8px 14px', border: `1px solid ${shuffleAnswersOn ? '#8b5cf6' : '#d1d5da'}`, borderRadius: '6px', background: shuffleAnswersOn ? '#f5f3ff' : '#fff' }}
+        >
+          <div style={{ width: '18px', height: '18px', borderRadius: '4px', border: `2px solid ${shuffleAnswersOn ? '#8b5cf6' : '#ccc'}`, background: shuffleAnswersOn ? '#8b5cf6' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            {shuffleAnswersOn && <span style={{ color: 'white', fontSize: '11px', fontWeight: 'bold' }}>✓</span>}
+          </div>
+          <span style={{ fontSize: '14px', color: '#444' }}>🔀 Shuffle answer choices</span>
+        </label>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+          <button onClick={() => handleRetake(true)} style={{ padding: '12px 20px', background: '#8b5cf6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '15px' }}>
+            🔀 Retake & Shuffle Questions
+          </button>
+          <button onClick={() => handleRetake(false)} style={{ padding: '12px 20px', background: '#0ea5e9', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '15px' }}>
+            🔁 Retake Same Order
+          </button>
+        </div>
+
+        <button onClick={() => navigate('/dashboard')} style={{ padding: '10px 20px', background: '#007bff', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '15px' }}>
+          Go to Dashboard
+        </button>
       </div>
     );
   }

@@ -8,7 +8,15 @@ function QuizPage() {
   const navigate = useNavigate();
   const rawQuestions = location.state?.questions;
 
-  const questions = useMemo(() => shuffleQuiz(rawQuestions || []), [rawQuestions]);
+  const [retakeKey, setRetakeKey] = useState(0);
+  const [forceOrder, setForceOrder] = useState(false);
+  const [shuffleAnswersOn, setShuffleAnswersOn] = useState(true);
+
+  const questions = useMemo(() => {
+    if (!rawQuestions || rawQuestions.length === 0) return [];
+    return shuffleQuiz(rawQuestions, { shuffleQuestions: !forceOrder, shuffleAnswers: shuffleAnswersOn });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rawQuestions, retakeKey, forceOrder, shuffleAnswersOn]);
 
   const [answers, setAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);
@@ -49,6 +57,13 @@ function QuizPage() {
 
   const handleSubmit = () => {
     setShowResults(true);
+  };
+
+  const handleRetake = (shuffle) => {
+    setAnswers({});
+    setShowResults(false);
+    setForceOrder(!shuffle);
+    setRetakeKey(prev => prev + 1);
   };
 
   return (
@@ -137,6 +152,37 @@ function QuizPage() {
             >
               Submit Quiz
             </button>
+          </div>
+        )}
+
+        {showResults && (
+          <div className="mt-12 flex flex-col items-center gap-4">
+            <p className="text-slate-400 text-sm uppercase tracking-wider font-semibold">Try again?</p>
+            <label
+              onClick={() => setShuffleAnswersOn(!shuffleAnswersOn)}
+              className="flex items-center gap-3 cursor-pointer select-none px-5 py-3 rounded-xl border-2 border-slate-700 hover:border-slate-600 bg-slate-800/50 transition-colors"
+            >
+              <div
+                className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-colors ${shuffleAnswersOn ? 'bg-amber-500 border-amber-500' : 'border-slate-500 bg-transparent'}`}
+              >
+                {shuffleAnswersOn && <span className="text-slate-900 text-xs font-bold">✓</span>}
+              </div>
+              <span className="text-slate-300 text-sm font-medium">🔀 Shuffle answer choices</span>
+            </label>
+            <div className="flex gap-4">
+              <button
+                onClick={() => handleRetake(true)}
+                className="bg-purple-600 hover:bg-purple-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-purple-500/25"
+              >
+                🔀 Retake & Shuffle Questions
+              </button>
+              <button
+                onClick={() => handleRetake(false)}
+                className="bg-sky-600 hover:bg-sky-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-sky-500/25"
+              >
+                🔁 Retake Same Order
+              </button>
+            </div>
           </div>
         )}
       </div>
