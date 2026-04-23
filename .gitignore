@@ -1,8 +1,11 @@
 # AWS EC2 Key
 252quizauto.pem
-
+backend/__pycache__/
+*.pyc
 # Environment files
 .env
 backend/.env
 frontend/.env
 full_history.txt
+backend/submissions/
+backend/uploads/
