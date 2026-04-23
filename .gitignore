@@ -1,0 +1,7 @@
+# AWS EC2 Key
+252quizauto.pem
+
+# Environment files
+.env
+backend/.env
+frontend/.env
