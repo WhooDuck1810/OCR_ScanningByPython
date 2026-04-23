@@ -48,14 +48,19 @@ function Home() {
         body: formData,
       });
 
-      if (!response.ok) {
-        const errData = await response.json().catch(() => null);
-        throw new Error((errData && errData.detail) || `Upload failed with status ${response.status}`);
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        if (!response.ok) {
+          const errData = await response.json().catch(() => null);
+          throw new Error((errData && errData.detail) || `Upload failed with status ${response.status}`);
+        }
+        const data = await response.json();
+        setExtractedText(data.content);
+        setStatus('success');
+      } else {
+        const textData = await response.text();
+        throw new Error(`Server returned an invalid non-JSON response. Please check if the backend is running at ${API_BASE_URL}`);
       }
-
-      const data = await response.json();
-      setExtractedText(data.content);
-      setStatus('success');
     } catch (error) {
       console.error('Error:', error);
       setErrorMsg(error.message || 'Something went wrong.');
@@ -78,13 +83,17 @@ function Home() {
         body: JSON.stringify({ text: extractedText }),
       });
 
-      if (!response.ok) {
-        throw new Error('Generation failed');
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        if (!response.ok) {
+          throw new Error('Generation failed');
+        }
+        const data = await response.json();
+        // Navigate to /quiz with state
+        navigate('/quiz', { state: { questions: data.questions } });
+      } else {
+        throw new Error(`Server returned non-JSON response. Ensure backend is running at ${API_BASE_URL}`);
       }
-
-      const data = await response.json();
-      // Navigate to /quiz with state
-      navigate('/quiz', { state: { questions: data.questions } });
 
     } catch (error) {
       console.error("Error generating quiz:", error);

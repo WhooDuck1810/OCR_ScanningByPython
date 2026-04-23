@@ -56,7 +56,7 @@ const EnhancedResults = () => {
   const accuracy = ((score / total_questions) * 100).toFixed(1);
   
   // Filter questions based on selection
-  const filteredQuestions = detailedResults?.filter((_, idx) => {
+  const filteredQuestions = (Array.isArray(detailedResults) ? detailedResults : []).filter((_, idx) => {
     if (filter === 'correct') return detailedResults[idx].isCorrect;
     if (filter === 'incorrect') return !detailedResults[idx].isCorrect;
     return true;
@@ -241,7 +241,7 @@ const EnhancedResults = () => {
           </p>
           
           <div style={styles.detailsList}>
-            {filteredQuestions && filteredQuestions.map((result, idx) => {
+            {(Array.isArray(filteredQuestions) ? filteredQuestions : []).map((result, idx) => {
               const originalIndex = detailedResults.findIndex(r => r === result);
               return (
                 <div 

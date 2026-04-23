@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { shuffleQuiz } from '../utils/shuffle';
+import { API_BASE_URL } from '../config';
 
 const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLimit: propTimeLimit = 300 }) => {
   const navigate = useNavigate();
@@ -54,12 +55,12 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
           setQuizName(effectiveQuizData.name || 'Enhanced Quiz');
           setTimeLeft(effectiveTimeLimit);
         } else if (quizId !== 'draft') {
-          const response = await axios.get(`http://52.221.241.254:8088/api/quizzes/${quizId}`);
+          const response = await axios.get(`${API_BASE_URL}/api/quizzes/${quizId}`);
           setQuestions(applyShuffles(response.data.questions));
           setQuizName(response.data.name);
           setTimeLeft(effectiveTimeLimit);
         } else {
-          const response = await axios.get('http://52.221.241.254:8088/api/drafts/latest');
+          const response = await axios.get(`${API_BASE_URL}/api/drafts/latest`);
           if (response.data && response.data.parsed_data) {
             setQuestions(applyShuffles(response.data.parsed_data));
             setQuizName('Draft Quiz');
@@ -109,7 +110,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
 
       const initBackendTimer = async () => {
         try {
-          await axios.post('http://52.221.241.254:8088/api/quiz/init-timer', {
+          await axios.post(`${API_BASE_URL}/api/quiz/init-timer`, {
             quiz_id: quizId,
             time_limit: timeLeft,
             started_at: Date.now()
@@ -170,7 +171,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
 
     try {
       let score = 0;
-      const results = questions.map((q, idx) => {
+      const results = (Array.isArray(questions) ? questions : []).map((q, idx) => {
         const userAnswer = answers[idx];
         const isCorrect = isAnswerCorrect(q, userAnswer);
 
@@ -212,7 +213,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
       };
 
       try {
-        await axios.post('http://52.221.241.254:8088/api/quiz/submit', submissionData);
+        await axios.post(`${API_BASE_URL}/api/quiz/submit`, submissionData);
         console.log('Backend submission successful');
       } catch (error) {
         console.error('Backend save failed, saving locally:', error);
@@ -330,7 +331,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
         const elapsed = Math.floor((Date.now() - quizStartedAt) / 1000);
         const remaining = Math.max(0, propTimeLimit - elapsed);
 
-        axios.post('http://52.221.241.254:8088/api/quiz/sync-time', {
+        axios.post(`${API_BASE_URL}/api/quiz/sync-time`, {
           quiz_id: quizId,
           elapsed_time: elapsed,
           remaining_time: remaining,
@@ -448,7 +449,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
     const remaining = Math.max(0, propTimeLimit - elapsed);
 
     try {
-      const response = await axios.post('http://52.221.241.254:8088/api/quiz/validate-time', {
+      const response = await axios.post(`${API_BASE_URL}/api/quiz/validate-time`, {
         quiz_id: quizId,
         client_remaining: remaining,
         client_elapsed: elapsed,
@@ -596,7 +597,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
             </div>
 
             <div style={styles.questionGrid}>
-              {questions.map((_, idx) => {
+              {(Array.isArray(questions) ? questions : []).map((_, idx) => {
                 const status = getQuestionStatus(idx);
                 let buttonStyle = { ...styles.questionGridButton };
                 if (status === 'answered') buttonStyle = { ...buttonStyle, ...styles.questionGridButtonAnswered };
@@ -654,7 +655,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
             </div>
 
             <div style={styles.optionsContainer}>
-              {currentQuestion.options && currentQuestion.options.map((option, idx) => {
+              {Array.isArray(currentQuestion?.options) && currentQuestion.options.map((option, idx) => {
                 const isSelected = answers[currentIndex] === option;
                 const optionLetter = String.fromCharCode(65 + idx);
 
