@@ -2,7 +2,7 @@ from pymongo import MongoClient
 import os
 from dotenv import load_dotenv
 
-load_dotenv(r"c:\Users\admin\Downloads\New folder (2)\QuizAuto\.env")
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
 MONGO_URI = os.getenv("DB")
 
 try:
