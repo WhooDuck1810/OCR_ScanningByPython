@@ -7,23 +7,26 @@ export function shuffleArray(array) {
   return shuffled;
 }
 
-export function shuffleQuiz(questions) {
-  return shuffleArray(questions).map((q) => {
-    let exactAnswerText = q.answer || q.correct_answer;
-    
-    // Convert letter answer to exact option string before shuffling
-    if (exactAnswerText && /^[A-Da-d]$/.test(exactAnswerText)) {
-      const optionIndex = exactAnswerText.toUpperCase().charCodeAt(0) - 65;
-      if (q.options && q.options[optionIndex]) {
-        exactAnswerText = q.options[optionIndex];
-      }
+function normalizeAnswer(q) {
+  let exactAnswerText = q.answer || q.correct_answer;
+  if (exactAnswerText && /^[A-Da-d]$/.test(exactAnswerText)) {
+    const optionIndex = exactAnswerText.toUpperCase().charCodeAt(0) - 65;
+    if (q.options && q.options[optionIndex]) {
+      exactAnswerText = q.options[optionIndex];
     }
-    
+  }
+  return exactAnswerText;
+}
+
+export function shuffleQuiz(questions, { shuffleQuestions = true, shuffleAnswers = true } = {}) {
+  const ordered = shuffleQuestions ? shuffleArray(questions) : [...questions];
+  return ordered.map((q) => {
+    const exactAnswerText = normalizeAnswer(q);
     return {
       ...q,
       answer: exactAnswerText,
       correct_answer: exactAnswerText,
-      options: shuffleArray(q.options),
+      options: shuffleAnswers ? shuffleArray(q.options) : q.options,
     };
   });
 }

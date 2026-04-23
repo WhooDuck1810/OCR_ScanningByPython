@@ -8,6 +8,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
   const quizId = propQuizId || paramQuizId || 'draft';
 
   const [questions, setQuestions] = useState([]);
+  const [originalQuestions, setOriginalQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [markedForReview, setMarkedForReview] = useState({});
@@ -29,6 +30,13 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
   useEffect(() => {
     const loadQuiz = async () => {
       setIsLoading(true);
+      const applyShuffles = (qs) => {
+        if (isShuffle || isShuffleAnswers) {
+          return shuffleQuiz(qs, { shuffleQuestions: isShuffle, shuffleAnswers: isShuffleAnswers });
+        }
+        return qs;
+      };
+
       try {
         if (propQuizData && propQuizData.questions) {
           setQuestions(propQuizData.questions);
@@ -217,7 +225,15 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
       setSubmissionStatus('success');
 
       setTimeout(() => {
-        navigate('/enhanced-results', { state: { results: submissionData, questions } });
+        navigate('/enhanced-results', {
+          state: {
+            results: submissionData,
+            questions,
+            originalQuestions,
+            quizName,
+            timeLimit: propTimeLimit,
+          }
+        });
       }, 1500);
 
     } catch (error) {
@@ -227,7 +243,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
         alert('Failed to submit quiz. Please try again.');
       }
     }
-  }, [answers, questions, quizId, quizName, propTimeLimit, timeLeft, isSubmitted, navigate, isAnswerCorrect]);
+  }, [answers, questions, originalQuestions, quizId, quizName, propTimeLimit, timeLeft, isSubmitted, navigate, isAnswerCorrect]);
 
   // DEFINE handleAutoSubmit
   const handleAutoSubmit = useCallback(() => {

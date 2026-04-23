@@ -114,6 +114,22 @@ const EnhancedResults = () => {
     URL.revokeObjectURL(url);
   };
 
+  const canRetake = originalQuestions && originalQuestions.length > 0;
+
+  const handleRetake = (shuffle) => {
+    navigate('/enhanced-quiz', {
+      state: {
+        quizData: {
+          name: passedQuizName || results.quiz_name || 'Retake Quiz',
+          questions: originalQuestions,
+        },
+        timeLimit: passedTimeLimit || results.time_limit || 300,
+        isShuffle: shuffle,
+        isShuffleAnswers: retakeShuffleAnswers,
+      }
+    });
+  };
+
   return (
     <div style={styles.container}>
       <div style={styles.card}>
@@ -631,6 +647,73 @@ const styles = {
     borderRadius: '6px',
     color: '#34d399',
     fontSize: '13px',
+  },
+  retakeSection: {
+    marginBottom: '24px',
+    padding: '24px',
+    backgroundColor: '#0f172a',
+    borderRadius: '12px',
+    border: '1px solid #334155',
+  },
+  retakeSectionTitle: {
+    fontSize: '16px',
+    fontWeight: '600',
+    color: '#94a3b8',
+    marginBottom: '16px',
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  },
+  shuffleAnswersToggle: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    cursor: 'pointer',
+    userSelect: 'none',
+    padding: '10px 14px',
+    backgroundColor: '#1e293b',
+    borderRadius: '8px',
+    border: '1px solid #334155',
+    marginBottom: '14px',
+  },
+  toggleCheckbox: {
+    width: '18px',
+    height: '18px',
+    borderRadius: '4px',
+    border: '2px solid #475569',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    transition: 'all 0.2s',
+  },
+  retakeButtonGroup: {
+    display: 'flex',
+    gap: '12px',
+  },
+  retakeShuffleButton: {
+    flex: 1,
+    padding: '14px 24px',
+    backgroundColor: '#8b5cf6',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '16px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
+  },
+  retakeSameButton: {
+    flex: 1,
+    padding: '14px 24px',
+    backgroundColor: '#0ea5e9',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '16px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
   },
   buttonGroup: {
     display: 'flex',

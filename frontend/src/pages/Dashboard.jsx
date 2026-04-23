@@ -16,6 +16,7 @@ export default function Dashboard() {
   const [showSetup, setShowSetup] = useState(false);
   const [setupMode, setSetupMode] = useState('normal'); // 'normal' or 'shuffle'
   const [timeLimitStr, setTimeLimitStr] = useState('300');
+  const [shuffleAnswers, setShuffleAnswers] = useState(true);
   const [selectedQuestions, setSelectedQuestions] = useState([]);
   const [selectedQuizName, setSelectedQuizName] = useState('');
   
@@ -69,7 +70,8 @@ export default function Dashboard() {
           questions: isShuffle ? [...selectedQuestions].sort(() => Math.random() - 0.5) : selectedQuestions
         },
         timeLimit: tl > 0 ? tl : 999999,
-        isShuffle: isShuffle
+        isShuffle: isShuffle,
+        isShuffleAnswers: shuffleAnswers
       }
     });
   };
@@ -205,6 +207,21 @@ export default function Dashboard() {
                 <option value="1800">30 Minutes</option>
                 <option value="3600">60 Minutes</option>
               </select>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label
+                onClick={() => setShuffleAnswers(!shuffleAnswers)}
+                style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 12px', border: '1px solid #ccc', borderRadius: '6px', background: shuffleAnswers ? '#f5f3ff' : '#fff', userSelect: 'none' }}
+              >
+                <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: `2px solid ${shuffleAnswers ? '#8b5cf6' : '#ccc'}`, background: shuffleAnswers ? '#8b5cf6' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  {shuffleAnswers && <span style={{ color: 'white', fontSize: '12px', fontWeight: 'bold' }}>✓</span>}
+                </div>
+                <div>
+                  <span style={{ fontWeight: 'bold', color: '#333' }}>🔀 Shuffle Answer Choices</span>
+                  <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#888' }}>Randomize the order of options within each question</p>
+                </div>
+              </label>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
