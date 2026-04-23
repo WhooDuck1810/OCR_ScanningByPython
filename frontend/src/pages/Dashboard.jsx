@@ -16,6 +16,7 @@ export default function Dashboard() {
   const [showSetup, setShowSetup] = useState(false);
   const [setupMode, setSetupMode] = useState('normal'); // 'normal' or 'shuffle'
   const [timeLimitStr, setTimeLimitStr] = useState('300');
+  const [questionLimitStr, setQuestionLimitStr] = useState('all');
   const [shuffleAnswers, setShuffleAnswers] = useState(true);
   const [selectedQuestions, setSelectedQuestions] = useState([]);
   const [selectedQuizName, setSelectedQuizName] = useState('');
@@ -63,11 +64,19 @@ export default function Dashboard() {
     const tl = parseInt(timeLimitStr, 10);
     const isShuffle = setupMode === 'shuffle';
     
+    let finalQuestions = [...selectedQuestions];
+    if (isShuffle) {
+      finalQuestions = finalQuestions.sort(() => Math.random() - 0.5);
+    }
+    if (questionLimitStr !== 'all') {
+      finalQuestions = finalQuestions.slice(0, parseInt(questionLimitStr, 10));
+    }
+    
     navigate('/enhanced-quiz', {
       state: {
         quizData: {
           name: selectedQuizName,
-          questions: isShuffle ? [...selectedQuestions].sort(() => Math.random() - 0.5) : selectedQuestions
+          questions: finalQuestions
         },
         timeLimit: tl > 0 ? tl : 999999,
         isShuffle: isShuffle,
@@ -192,6 +201,20 @@ export default function Dashboard() {
             <p style={{ color: '#666', marginBottom: '20px' }}>
               Mode: <strong>{setupMode === 'normal' ? 'Normal (Ordered)' : 'Shuffle Questions'}</strong>
             </p>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#444' }}>Question Limit:</label>
+              <select 
+                value={questionLimitStr}
+                onChange={(e) => setQuestionLimitStr(e.target.value)}
+                style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '16px', color: '#333' }}
+              >
+                <option value="all">Take All Questions ({selectedQuestions.length})</option>
+                {[5, 10, 15, 20, 25, 30, 40, 50].filter(n => n < selectedQuestions.length).map(n => (
+                  <option key={n} value={n.toString()}>{n} Questions</option>
+                ))}
+              </select>
+            </div>
             
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#444' }}>Select Time Limit:</label>

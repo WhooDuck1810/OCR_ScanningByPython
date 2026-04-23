@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
+import { shuffleQuiz } from '../utils/shuffle';
 
 const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLimit: propTimeLimit = 300 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { quizId: paramQuizId } = useParams();
   const quizId = propQuizId || paramQuizId || 'draft';
 
@@ -30,6 +32,15 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
   useEffect(() => {
     const loadQuiz = async () => {
       setIsLoading(true);
+      
+      const stateQuizData = location.state?.quizData;
+      const stateTimeLimit = location.state?.timeLimit;
+      const isShuffle = location.state?.isShuffle || false;
+      const isShuffleAnswers = location.state?.isShuffleAnswers || false;
+
+      const effectiveQuizData = propQuizData || stateQuizData;
+      const effectiveTimeLimit = stateTimeLimit || propTimeLimit;
+
       const applyShuffles = (qs) => {
         if (isShuffle || isShuffleAnswers) {
           return shuffleQuiz(qs, { shuffleQuestions: isShuffle, shuffleAnswers: isShuffleAnswers });
@@ -38,21 +49,21 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
       };
 
       try {
-        if (propQuizData && propQuizData.questions) {
-          setQuestions(propQuizData.questions);
-          setQuizName(propQuizData.name || 'Enhanced Quiz');
-          setTimeLeft(propTimeLimit);
+        if (effectiveQuizData && effectiveQuizData.questions) {
+          setQuestions(applyShuffles(effectiveQuizData.questions));
+          setQuizName(effectiveQuizData.name || 'Enhanced Quiz');
+          setTimeLeft(effectiveTimeLimit);
         } else if (quizId !== 'draft') {
           const response = await axios.get(`http://52.221.241.254:8088/api/quizzes/${quizId}`);
-          setQuestions(response.data.questions);
+          setQuestions(applyShuffles(response.data.questions));
           setQuizName(response.data.name);
-          setTimeLeft(propTimeLimit);
+          setTimeLeft(effectiveTimeLimit);
         } else {
           const response = await axios.get('http://52.221.241.254:8088/api/drafts/latest');
           if (response.data && response.data.parsed_data) {
-            setQuestions(response.data.parsed_data);
+            setQuestions(applyShuffles(response.data.parsed_data));
             setQuizName('Draft Quiz');
-            setTimeLeft(propTimeLimit);
+            setTimeLeft(effectiveTimeLimit);
           }
         }
       } catch (error) {
@@ -62,7 +73,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
       }
     };
     loadQuiz();
-  }, [quizId, propQuizData, propTimeLimit]);
+  }, [quizId, propQuizData, propTimeLimit, location.state]);
   // After setQuestions, add this debug code
   useEffect(() => {
     if (questions.length > 0) {

@@ -10,6 +10,7 @@ import time
 #import google.generativeai as genai
 
 import fitz  # PyMuPDF
+import docx
 from pymongo import ReturnDocument
 from enhanced_parser import parse_quiz_text, parse_quiz_text_advanced, validate_questions
 from timer_backend import (
@@ -107,32 +108,38 @@ async def root():
         ]
     }
 
-# ============ PDF Upload and Extraction ============
+# ============ File Upload and Extraction ============
 
 @app.post("/api/upload")
-async def upload_pdf(file: UploadFile = File(...)):
-    if not file.filename.endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+async def upload_file(file: UploadFile = File(...)):
+    allowed_extensions = (".pdf", ".docx")
+    if not any(file.filename.lower().endswith(ext) for ext in allowed_extensions):
+        raise HTTPException(status_code=400, detail="Only PDF or DOCX files are allowed")
     
-    # Use unique filename to avoid collisions (from Version 2)
+    # Use unique filename to avoid collisions
     unique_filename = f"{uuid.uuid4()}_{file.filename}"
     file_path = os.path.join(UPLOAD_DIR, unique_filename)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     
     try:
-        doc = fitz.open(file_path)
         text = ""
-        for page in doc:
-            text += page.get_text()
-        doc.close()
-        
-        if not text.strip():
-            text = "[Empty PDF content. OCR not implemented yet. Please ensure PDF contains selectable text.]"
+        if file.filename.lower().endswith('.pdf'):
+            doc = fitz.open(file_path)
+            for page in doc:
+                text += page.get_text()
+            doc.close()
+            if not text.strip():
+                text = "[Empty PDF content. OCR not implemented yet. Please ensure PDF contains selectable text.]"
+        elif file.filename.lower().endswith('.docx'):
+            doc = docx.Document(file_path)
+            text = "\n".join([para.text for para in doc.paragraphs])
+            if not text.strip():
+                text = "[Empty DOCX content. Please ensure document contains text.]"
             
         return {"filename": file.filename, "content": text}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing PDF: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 
 @app.post("/api/upload-gemini")
 async def upload_pdf_gemini(file: UploadFile = File(...)):

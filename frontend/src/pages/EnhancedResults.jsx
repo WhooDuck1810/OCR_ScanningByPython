@@ -4,9 +4,16 @@ import { useLocation, useNavigate } from 'react-router-dom';
 const EnhancedResults = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { results, questions } = location.state || {};
+  const { 
+    results, 
+    questions,
+    originalQuestions = [],
+    quizName: passedQuizName = '',
+    timeLimit: passedTimeLimit = 300
+  } = location.state || {};
   const [expandedQuestion, setExpandedQuestion] = useState(null);
   const [filter, setFilter] = useState('all'); // 'all', 'correct', 'incorrect'
+  const [retakeShuffleAnswers, setRetakeShuffleAnswers] = useState(true);
 
   if (!results) {
     return (

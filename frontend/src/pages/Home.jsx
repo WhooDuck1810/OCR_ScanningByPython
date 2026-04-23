@@ -10,26 +10,8 @@ function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [status, setStatus] = useState('idle'); // idle, uploading, scanning, success, error
   const [errorMsg, setErrorMsg] = useState('');
-  const [geminiCooldown, setGeminiCooldown] = useState(0);
 
   const navigate = useNavigate();
-
-  React.useEffect(() => {
-    const checkCooldown = () => {
-      const allowedTime = localStorage.getItem('geminiAllowedTime');
-      if (allowedTime) {
-        const remaining = Math.ceil((parseInt(allowedTime, 10) - Date.now()) / 1000);
-        if (remaining > 0) {
-          setGeminiCooldown(remaining);
-        } else {
-          setGeminiCooldown(0);
-        }
-      }
-    };
-    checkCooldown();
-    const timer = setInterval(checkCooldown, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -48,7 +30,7 @@ function Home() {
     setIsScanning(false);
   };
 
-  const handleUpload = async (useGemini = false) => {
+  const handleUpload = async () => {
     if (!file) return;
 
     setStatus('uploading');
@@ -57,7 +39,7 @@ function Home() {
     const formData = new FormData();
     formData.append('file', file);
 
-    const endpoint = useGemini ? `${API_BASE_URL}/api/upload-gemini` : `${API_BASE_URL}/api/upload`;
+    const endpoint = `${API_BASE_URL}/api/upload`;
 
     try {
       setErrorMsg('');
@@ -80,12 +62,6 @@ function Home() {
       setStatus('error');
     } finally {
       setIsScanning(false);
-      
-      // Enforce a strict 45-second cooldown for Gemini to avoid hitting 429 Rate Limits
-      if (useGemini) {
-        const nextAllowed = Date.now() + 45000;
-        localStorage.setItem('geminiAllowedTime', nextAllowed.toString());
-      }
     }
   };
 
@@ -170,24 +146,11 @@ function Home() {
 
                 <div className="flex gap-4">
                   <button
-                    onClick={() => handleUpload(false)}
+                    onClick={() => handleUpload()}
                     disabled={isScanning}
                     className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
                   >
                     {isScanning ? <Loader2 className="animate-spin" /> : 'Start Scan (PyMuPDF)'}
-                  </button>
-                  <button
-                    onClick={() => handleUpload(true)}
-                    disabled={isScanning || geminiCooldown > 0}
-                    className="flex-1 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
-                  >
-                    {isScanning ? (
-                      <><Loader2 className="animate-spin" /> Scanning...</>
-                    ) : geminiCooldown > 0 ? (
-                      `⏳ Wait ${geminiCooldown}s`
-                    ) : (
-                      '✨ Scan with Gemini AI'
-                    )}
                   </button>
                 </div>
               </div>
