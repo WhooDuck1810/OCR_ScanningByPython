@@ -43,12 +43,12 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
           setQuizName(propQuizData.name || 'Enhanced Quiz');
           setTimeLeft(propTimeLimit);
         } else if (quizId !== 'draft') {
-          const response = await axios.get(`http://localhost:8088/api/quizzes/${quizId}`);
+          const response = await axios.get(`http://52.221.241.254:8088/api/quizzes/${quizId}`);
           setQuestions(response.data.questions);
           setQuizName(response.data.name);
           setTimeLeft(propTimeLimit);
         } else {
-          const response = await axios.get('http://localhost:8088/api/drafts/latest');
+          const response = await axios.get('http://52.221.241.254:8088/api/drafts/latest');
           if (response.data && response.data.parsed_data) {
             setQuestions(response.data.parsed_data);
             setQuizName('Draft Quiz');
@@ -98,7 +98,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
 
       const initBackendTimer = async () => {
         try {
-          await axios.post('http://localhost:8088/api/quiz/init-timer', {
+          await axios.post('http://52.221.241.254:8088/api/quiz/init-timer', {
             quiz_id: quizId,
             time_limit: timeLeft,
             started_at: Date.now()
@@ -201,7 +201,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
       };
 
       try {
-        await axios.post('http://localhost:8088/api/quiz/submit', submissionData);
+        await axios.post('http://52.221.241.254:8088/api/quiz/submit', submissionData);
         console.log('Backend submission successful');
       } catch (error) {
         console.error('Backend save failed, saving locally:', error);
@@ -319,7 +319,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
         const elapsed = Math.floor((Date.now() - quizStartedAt) / 1000);
         const remaining = Math.max(0, propTimeLimit - elapsed);
 
-        axios.post('http://localhost:8088/api/quiz/sync-time', {
+        axios.post('http://52.221.241.254:8088/api/quiz/sync-time', {
           quiz_id: quizId,
           elapsed_time: elapsed,
           remaining_time: remaining,
@@ -437,7 +437,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
     const remaining = Math.max(0, propTimeLimit - elapsed);
 
     try {
-      const response = await axios.post('http://localhost:8088/api/quiz/validate-time', {
+      const response = await axios.post('http://52.221.241.254:8088/api/quiz/validate-time', {
         quiz_id: quizId,
         client_remaining: remaining,
         client_elapsed: elapsed,
