@@ -7,6 +7,7 @@ import Runner from './pages/Runner';
 import Dashboard from './pages/Dashboard';
 import EnhancedQuizRunner from './pages/EnhancedQuizRunner';
 import EnhancedResults from './pages/EnhancedResults';
+import CreatorAnalytics from './pages/CreatorAnalytics';
 
 function App() {
   const navLinkStyle = ({ isActive }) => 
@@ -27,6 +28,7 @@ function App() {
           <NavLink to="/" className={navLinkStyle}>Home</NavLink>
           <NavLink to="/editor" className={navLinkStyle}>Editor</NavLink>
           <NavLink to="/dashboard" className={navLinkStyle}>Dashboard</NavLink>
+          <NavLink to="/analytics" className={navLinkStyle}>Analytics</NavLink>
         </div>
       </nav>
       <Routes>
@@ -37,6 +39,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/enhanced-quiz/:quizId?" element={<EnhancedQuizRunner />} />
         <Route path="/enhanced-results/:quizId?" element={<EnhancedResults />} />
+        <Route path="/analytics" element={<CreatorAnalytics />} />
       </Routes>
     </BrowserRouter>
   );

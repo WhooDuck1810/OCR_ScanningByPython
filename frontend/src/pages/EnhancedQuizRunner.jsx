@@ -11,7 +11,6 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
   const quizId = propQuizId || paramQuizId || 'draft';
 
   const [questions, setQuestions] = useState([]);
-  const [originalQuestions, setOriginalQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [markedForReview, setMarkedForReview] = useState({});
@@ -23,6 +22,8 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
   const [showSidebar, setShowSidebar] = useState(true);
   const [quizName, setQuizName] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [canShowAnswers, setCanShowAnswers] = useState(false);
+  const [effectiveTimeLimit, setEffectiveTimeLimit] = useState(propTimeLimit);
 
   const timerRef = useRef(null);
   const autoSubmitTriggered = useRef(false);
@@ -40,7 +41,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
       const isShuffleAnswers = location.state?.isShuffleAnswers || false;
 
       const effectiveQuizData = propQuizData || stateQuizData;
-      const effectiveTimeLimit = stateTimeLimit || propTimeLimit;
+      let resolvedTimeLimit = stateTimeLimit || propTimeLimit;
 
       const applyShuffles = (qs) => {
         if (isShuffle || isShuffleAnswers) {
@@ -53,18 +54,26 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
         if (effectiveQuizData && effectiveQuizData.questions) {
           setQuestions(applyShuffles(effectiveQuizData.questions));
           setQuizName(effectiveQuizData.name || 'Enhanced Quiz');
-          setTimeLeft(effectiveTimeLimit);
+          setTimeLeft(resolvedTimeLimit);
+          setEffectiveTimeLimit(resolvedTimeLimit);
+          setCanShowAnswers(Boolean(effectiveQuizData.allow_answer_review));
         } else if (quizId !== 'draft') {
           const response = await axios.get(`${API_BASE_URL}/api/quizzes/${quizId}`);
           setQuestions(applyShuffles(response.data.questions));
           setQuizName(response.data.name);
-          setTimeLeft(effectiveTimeLimit);
+          const lockedLimit = response.data.lock_time_limit ? (response.data.time_limit || resolvedTimeLimit) : resolvedTimeLimit;
+          resolvedTimeLimit = lockedLimit;
+          setTimeLeft(lockedLimit);
+          setEffectiveTimeLimit(lockedLimit);
+          setCanShowAnswers(Boolean(response.data.allow_answer_review));
         } else {
           const response = await axios.get(`${API_BASE_URL}/api/drafts/latest`);
           if (response.data && response.data.parsed_data) {
             setQuestions(applyShuffles(response.data.parsed_data));
             setQuizName('Draft Quiz');
-            setTimeLeft(effectiveTimeLimit);
+            setTimeLeft(resolvedTimeLimit);
+            setEffectiveTimeLimit(resolvedTimeLimit);
+            setCanShowAnswers(true);
           }
         }
       } catch (error) {
@@ -194,8 +203,8 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
         };
       });
 
-      const timeTaken = propTimeLimit - timeLeft;
-      const percentage = (score / questions.length) * 100;
+      const timeTaken = effectiveTimeLimit - timeLeft;
+      const percentage = questions.length > 0 ? (score / questions.length) * 100 : 0;
 
       const submissionData = {
         quiz_id: quizId,
@@ -206,17 +215,24 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
         total_questions: questions.length,
         percentage: percentage,
         time_taken: timeTaken,
-        time_limit: propTimeLimit,
+        time_limit: effectiveTimeLimit,
         is_auto_submit: isAutoSubmit,
         submitted_at: new Date().toISOString(),
         time_remaining: timeLeft,
       };
 
       try {
-        await axios.post(`${API_BASE_URL}/api/quiz/submit`, submissionData);
+        const submitResponse = await axios.post(`${API_BASE_URL}/api/quiz/submit`, submissionData);
+        const serverResult = submitResponse?.data || {};
+        submissionData.score = Number.isFinite(serverResult.score) ? serverResult.score : score;
+        submissionData.total_questions = Number.isFinite(serverResult.total) ? serverResult.total : questions.length;
+        submissionData.percentage = Number.isFinite(serverResult.percentage) ? serverResult.percentage : percentage;
+        submissionData.results = serverResult.can_show_answers ? (serverResult.results || results) : [];
+        submissionData.can_show_answers = Boolean(serverResult.can_show_answers);
         console.log('Backend submission successful');
       } catch (error) {
         console.error('Backend save failed, saving locally:', error);
+        submissionData.can_show_answers = canShowAnswers;
       }
 
       const history = JSON.parse(localStorage.getItem('quizHistory') || '[]');
@@ -241,9 +257,9 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
           state: {
             results: submissionData,
             questions,
-            originalQuestions,
             quizName,
-            timeLimit: propTimeLimit,
+            timeLimit: effectiveTimeLimit,
+            canShowAnswers: submissionData.can_show_answers ?? canShowAnswers,
           }
         });
       }, 1500);
@@ -255,7 +271,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
         alert('Failed to submit quiz. Please try again.');
       }
     }
-  }, [answers, questions, originalQuestions, quizId, quizName, propTimeLimit, timeLeft, isSubmitted, navigate, isAnswerCorrect]);
+  }, [answers, questions, quizId, quizName, effectiveTimeLimit, timeLeft, isSubmitted, navigate, isAnswerCorrect, canShowAnswers]);
 
   // DEFINE handleAutoSubmit
   const handleAutoSubmit = useCallback(() => {
@@ -329,7 +345,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
     syncIntervalRef.current = setInterval(() => {
       if (!isSubmitted && !isTimeUp && quizStartedAt && timerRef.current) {
         const elapsed = Math.floor((Date.now() - quizStartedAt) / 1000);
-        const remaining = Math.max(0, propTimeLimit - elapsed);
+        const remaining = Math.max(0, effectiveTimeLimit - elapsed);
 
         axios.post(`${API_BASE_URL}/api/quiz/sync-time`, {
           quiz_id: quizId,
@@ -468,11 +484,6 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
     }
   };
 
-  const testAutoSubmit = () => {
-    console.log('Manual test - setting timeLeft to 0');
-    setTimeLeft(0);
-  };
-
   if (isLoading) {
     return (
       <div style={styles.loadingContainer}>
@@ -556,9 +567,6 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
             <button onClick={handleManualTimeSync} style={styles.syncButton} title="Sync with server">
               🔄
             </button>
-            <button onClick={testAutoSubmit} style={{ ...styles.syncButton, background: '#ef4444', marginLeft: '5px' }} title="Test Auto-Submit">
-              ⏰ Test
-            </button>
           </div>
 
           <button onClick={() => {
@@ -571,7 +579,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
         </div>
 
         <div style={styles.timerProgressBar}>
-          <div style={{ ...styles.timerProgressFill, width: `${(timeLeft / propTimeLimit) * 100}%`, backgroundColor: getTimerColor() }} />
+          <div style={{ ...styles.timerProgressFill, width: `${(timeLeft / (effectiveTimeLimit || 1)) * 100}%`, backgroundColor: getTimerColor() }} />
         </div>
       </div>
 

@@ -10,7 +10,7 @@ import time
 #import google.generativeai as genai
 
 import fitz  # PyMuPDF
-import docx
+# import docx
 from pymongo import ReturnDocument
 from enhanced_parser import parse_quiz_text, parse_quiz_text_advanced, validate_questions
 from timer_backend import (
@@ -42,9 +42,9 @@ if MONGO_URI:
         saved_quizzes_collection = mongo_db["saved_quizzes"]
         drafts_collection = mongo_db["drafts"]
         counters_collection = mongo_db["counters"]
-        print("✅ MongoDB connected")
+        print("[OK] MongoDB connected")
     except Exception as e:
-        print(f"⚠️ MongoDB not connected: {e}")
+        print(f"[WARN] MongoDB not connected: {e}")
 
 if mongo_collection is None:
     raise RuntimeError("MongoDB is required. Set DB in .env")
@@ -79,6 +79,9 @@ class DraftRequest(BaseModel):
 class SaveQuizRequest(BaseModel):
     name: str
     questions: List[dict]
+    time_limit: Optional[int] = 300
+    lock_time_limit: Optional[bool] = True
+    allow_answer_review: Optional[bool] = False
 
 
 def _next_id(counter_name: str) -> int:
@@ -260,6 +263,9 @@ async def save_quiz(request: SaveQuizRequest):
                 "quiz_id": quiz_id,
                 "name": request.name,
                 "questions": request.questions,
+                "time_limit": int(request.time_limit or 0),
+                "lock_time_limit": bool(request.lock_time_limit),
+                "allow_answer_review": bool(request.allow_answer_review),
                 "created_at": datetime.utcnow(),
             }
         )
@@ -268,7 +274,10 @@ async def save_quiz(request: SaveQuizRequest):
             "status": "success",
             "quiz_id": quiz_id,
             "name": request.name,
-            "question_count": len(request.questions)
+            "question_count": len(request.questions),
+            "time_limit": int(request.time_limit or 0),
+            "lock_time_limit": bool(request.lock_time_limit),
+            "allow_answer_review": bool(request.allow_answer_review),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save quiz: {str(e)}")
@@ -282,29 +291,55 @@ async def get_quizzes():
             "name": q.get("name", ""),
             "created_at": q.get("created_at").isoformat() if q.get("created_at") else None,
             "question_count": len(q.get("questions", [])),
+            "time_limit": int(q.get("time_limit", 0) or 0),
+            "lock_time_limit": bool(q.get("lock_time_limit", True)),
+            "allow_answer_review": bool(q.get("allow_answer_review", False)),
         }
         for q in quizzes
     ]
 
 @app.get("/api/quizzes/{quiz_id}")
-async def get_quiz(quiz_id: int):
+async def get_quiz(quiz_id: int, include_answers: bool = False):
     quiz = saved_quizzes_collection.find_one({"quiz_id": quiz_id})
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
-    
+
+    allow_answer_review = bool(quiz.get("allow_answer_review", False))
+    expose_answers = include_answers and allow_answer_review
+
     return {
         "id": quiz.get("quiz_id"),
         "name": quiz.get("name", ""),
         "created_at": quiz.get("created_at").isoformat() if quiz.get("created_at") else None,
+        "time_limit": int(quiz.get("time_limit", 0) or 0),
+        "lock_time_limit": bool(quiz.get("lock_time_limit", True)),
+        "allow_answer_review": allow_answer_review,
         "questions": [
             {
                 "id": idx + 1,
                 "question": q.get("question", ""),
                 "options": q.get("options", []),
-                "answer": q.get("answer", q.get("correct_answer", "")),
+                **(
+                    {"answer": q.get("answer", q.get("correct_answer", ""))}
+                    if expose_answers
+                    else {}
+                ),
             }
             for idx, q in enumerate(quiz.get("questions", []))
         ]
+    }
+
+
+@app.get("/api/quizzes/{quiz_id}/attempt-config")
+async def get_quiz_attempt_config(quiz_id: int):
+    quiz = saved_quizzes_collection.find_one({"quiz_id": quiz_id})
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    return {
+        "quiz_id": quiz.get("quiz_id"),
+        "time_limit": int(quiz.get("time_limit", 0) or 0),
+        "lock_time_limit": bool(quiz.get("lock_time_limit", True)),
+        "allow_answer_review": bool(quiz.get("allow_answer_review", False)),
     }
 
 @app.get("/api/debug")
@@ -454,16 +489,16 @@ async def health_check():
 if __name__ == "__main__":
     import uvicorn
     
-    print("🚀 Starting Quiz Generator API Server...")
-    print(f"📁 Upload directory: {UPLOAD_DIR}")
-    print(f"🗄️  Database: MongoDB only")
+    print("Starting Quiz Generator API Server...")
+    print(f"Upload directory: {UPLOAD_DIR}")
+    print("Database: MongoDB only")
     if mongo_collection is not None:
-        print(f"🍃 MongoDB: Connected for all persistence")
+        print("MongoDB: Connected for all persistence")
     else:
-        print(f"🍃 MongoDB: Not configured (set DB in .env)")
-    print(f"⏲️  Timer features enabled")
-    print(f"🌐 Server running at: http://0.0.0.0:8088")
-    print(f"📚 API Docs: http://0.0.0.0:8088/docs")
+        print("MongoDB: Not configured (set DB in .env)")
+    print("Timer features enabled")
+    print("Server running at: http://0.0.0.0:8088")
+    print("API Docs: http://0.0.0.0:8088/docs")
     
     uvicorn.run(
         app, 
