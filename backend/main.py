@@ -1,13 +1,16 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Request
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request, Depends, Header, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import shutil
 import os
 import uuid
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 #import google.generativeai as genai
+
+from passlib.context import CryptContext
+from jose import jwt, JWTError
 
 import fitz  # PyMuPDF
 import docx
@@ -28,10 +31,18 @@ load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
 load_dotenv()
 
 MONGO_URI = os.getenv("DB")
+JWT_SECRET = os.getenv("JWT_SECRET", "quizauto-dev-secret-change-in-production")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRE_HOURS = 72
+
 mongo_collection = None
 saved_quizzes_collection = None
 drafts_collection = None
 counters_collection = None
+users_collection = None
+invite_links_collection = None
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 if MONGO_URI:
     try:
@@ -42,6 +53,9 @@ if MONGO_URI:
         saved_quizzes_collection = mongo_db["saved_quizzes"]
         drafts_collection = mongo_db["drafts"]
         counters_collection = mongo_db["counters"]
+        users_collection = mongo_db["users"]
+        invite_links_collection = mongo_db["invite_links"]
+        users_collection.create_index("username", unique=True)
         print("✅ MongoDB connected")
     except Exception as e:
         print(f"⚠️ MongoDB not connected: {e}")
@@ -80,6 +94,46 @@ class SaveQuizRequest(BaseModel):
     name: str
     questions: List[dict]
 
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+    role: Optional[str] = "creator"
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+def _create_token(user_id: int, username: str, role: str) -> str:
+    payload = {
+        "user_id": user_id,
+        "username": username,
+        "role": role,
+        "exp": datetime.utcnow() + timedelta(hours=JWT_EXPIRE_HOURS),
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+async def get_current_user(authorization: str = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    token = authorization.split(" ", 1)[1]
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return payload
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+
+async def get_optional_user(authorization: str = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    token = authorization.split(" ", 1)[1]
+    try:
+        return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    except JWTError:
+        return None
+
 
 def _next_id(counter_name: str) -> int:
     if counters_collection is None:
@@ -107,6 +161,49 @@ async def root():
             "Quiz submission and result storage"
         ]
     }
+
+# ============ Auth Endpoints ============
+
+@app.post("/api/auth/register")
+async def register(req: RegisterRequest):
+    if req.role not in ("creator", "quiz_taker"):
+        raise HTTPException(status_code=400, detail="Role must be 'creator' or 'quiz_taker'")
+    if len(req.username) < 3:
+        raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
+    if len(req.password) < 4:
+        raise HTTPException(status_code=400, detail="Password must be at least 4 characters")
+
+    existing = users_collection.find_one({"username": req.username})
+    if existing:
+        raise HTTPException(status_code=409, detail="Username already taken")
+
+    user_id = _next_id("users")
+    users_collection.insert_one({
+        "user_id": user_id,
+        "username": req.username,
+        "password_hash": pwd_context.hash(req.password),
+        "role": req.role,
+        "created_at": datetime.utcnow(),
+    })
+
+    token = _create_token(user_id, req.username, req.role)
+    return {"token": token, "user": {"user_id": user_id, "username": req.username, "role": req.role}}
+
+
+@app.post("/api/auth/login")
+async def login(req: LoginRequest):
+    user = users_collection.find_one({"username": req.username})
+    if not user or not pwd_context.verify(req.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    token = _create_token(user["user_id"], user["username"], user["role"])
+    return {"token": token, "user": {"user_id": user["user_id"], "username": user["username"], "role": user["role"]}}
+
+
+@app.get("/api/auth/me")
+async def get_me(user: dict = Depends(get_current_user)):
+    return {"user_id": user["user_id"], "username": user["username"], "role": user["role"]}
+
 
 # ============ File Upload and Extraction ============
 
@@ -252,7 +349,7 @@ async def parse_quiz(request: QuizRequest):
 # ============ Quiz Management (from Version 1) ============
 
 @app.post("/api/save-quiz")
-async def save_quiz(request: SaveQuizRequest):
+async def save_quiz(request: SaveQuizRequest, user: dict = Depends(get_current_user)):
     try:
         quiz_id = _next_id("saved_quizzes")
         saved_quizzes_collection.insert_one(
@@ -260,6 +357,7 @@ async def save_quiz(request: SaveQuizRequest):
                 "quiz_id": quiz_id,
                 "name": request.name,
                 "questions": request.questions,
+                "created_by": user["user_id"],
                 "created_at": datetime.utcnow(),
             }
         )
@@ -274,8 +372,8 @@ async def save_quiz(request: SaveQuizRequest):
         raise HTTPException(status_code=500, detail=f"Failed to save quiz: {str(e)}")
 
 @app.get("/api/quizzes")
-async def get_quizzes():
-    quizzes = list(saved_quizzes_collection.find({}).sort("created_at", -1))
+async def get_quizzes(user: dict = Depends(get_current_user)):
+    quizzes = list(saved_quizzes_collection.find({"created_by": user["user_id"]}).sort("created_at", -1))
     return [
         {
             "id": q.get("quiz_id"),
@@ -287,11 +385,22 @@ async def get_quizzes():
     ]
 
 @app.get("/api/quizzes/{quiz_id}")
-async def get_quiz(quiz_id: int):
+async def get_quiz(quiz_id: int, invite_token: Optional[str] = Query(None), user: dict = Depends(get_optional_user)):
     quiz = saved_quizzes_collection.find_one({"quiz_id": quiz_id})
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
-    
+
+    is_owner = user and quiz.get("created_by") == user.get("user_id")
+    has_valid_invite = False
+    if invite_token:
+        link = invite_links_collection.find_one({"invite_token": invite_token, "quiz_id": quiz_id})
+        if link:
+            has_valid_invite = True
+    has_no_owner = quiz.get("created_by") is None
+
+    if not (is_owner or has_valid_invite or has_no_owner):
+        raise HTTPException(status_code=403, detail="Access denied. Use an invite link to access this quiz.")
+
     return {
         "id": quiz.get("quiz_id"),
         "name": quiz.get("name", ""),
@@ -306,6 +415,36 @@ async def get_quiz(quiz_id: int):
             for idx, q in enumerate(quiz.get("questions", []))
         ]
     }
+
+# ============ Invite Link Endpoints ============
+
+@app.post("/api/quizzes/{quiz_id}/invite")
+async def create_invite(quiz_id: int, user: dict = Depends(get_current_user)):
+    quiz = saved_quizzes_collection.find_one({"quiz_id": quiz_id})
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    if quiz.get("created_by") != user["user_id"]:
+        raise HTTPException(status_code=403, detail="Only the quiz creator can generate invite links")
+
+    invite_token = str(uuid.uuid4())
+    invite_links_collection.insert_one({
+        "quiz_id": quiz_id,
+        "invite_token": invite_token,
+        "created_by": user["user_id"],
+        "created_at": datetime.utcnow(),
+    })
+    return {"invite_token": invite_token, "quiz_id": quiz_id}
+
+
+@app.get("/api/invite/{token}")
+async def resolve_invite(token: str):
+    link = invite_links_collection.find_one({"invite_token": token})
+    if not link:
+        raise HTTPException(status_code=404, detail="Invalid or expired invite link")
+
+    quiz = saved_quizzes_collection.find_one({"quiz_id": link["quiz_id"]})
+    quiz_name = quiz.get("name", "") if quiz else "Unknown"
+    return {"quiz_id": link["quiz_id"], "quiz_name": quiz_name, "invite_token": token}
 
 @app.get("/api/debug")
 async def debug():
@@ -323,10 +462,10 @@ async def debug():
 # ============ Draft Endpoints ============
 
 @app.post("/api/drafts")
-async def save_draft(draft: DraftRequest):
+async def save_draft(draft: DraftRequest, user: dict = Depends(get_current_user)):
     if draft.id:
         update_result = drafts_collection.update_one(
-            {"draft_id": draft.id},
+            {"draft_id": draft.id, "created_by": user["user_id"]},
             {
                 "$set": {
                     "raw_text": draft.raw_text,
@@ -336,11 +475,11 @@ async def save_draft(draft: DraftRequest):
             },
         )
         if update_result.matched_count == 0:
-            # Fallback: if ID was provided but not found, create it instead of failing
             drafts_collection.insert_one({
                 "draft_id": draft.id,
                 "raw_text": draft.raw_text,
                 "parsed_data": draft.parsed_data,
+                "created_by": user["user_id"],
                 "updated_at": datetime.utcnow(),
             })
         draft_id = draft.id
@@ -351,6 +490,7 @@ async def save_draft(draft: DraftRequest):
                 "draft_id": draft_id,
                 "raw_text": draft.raw_text,
                 "parsed_data": draft.parsed_data,
+                "created_by": user["user_id"],
                 "updated_at": datetime.utcnow(),
             }
         )
@@ -358,8 +498,8 @@ async def save_draft(draft: DraftRequest):
     return {"id": draft_id, "message": "Draft saved successfully"}
 
 @app.get("/api/drafts/all")
-async def get_all_drafts():
-    drafts = list(drafts_collection.find({}).sort("updated_at", -1))
+async def get_all_drafts(user: dict = Depends(get_current_user)):
+    drafts = list(drafts_collection.find({"created_by": user["user_id"]}).sort("updated_at", -1))
     return [
         {
             "id": d.get("draft_id"),
@@ -370,8 +510,8 @@ async def get_all_drafts():
     ]
 
 @app.get("/api/drafts/latest")
-async def get_latest_draft():
-    draft = drafts_collection.find_one({}, sort=[("updated_at", -1)])
+async def get_latest_draft(user: dict = Depends(get_current_user)):
+    draft = drafts_collection.find_one({"created_by": user["user_id"]}, sort=[("updated_at", -1)])
     if not draft:
         return {"id": None, "raw_text": "", "parsed_data": []}
     return {
@@ -381,8 +521,8 @@ async def get_latest_draft():
     }
 
 @app.get("/api/drafts/{draft_id}")
-async def get_draft(draft_id: int):
-    draft = drafts_collection.find_one({"draft_id": draft_id})
+async def get_draft(draft_id: int, user: dict = Depends(get_current_user)):
+    draft = drafts_collection.find_one({"draft_id": draft_id, "created_by": user["user_id"]})
     if not draft:
         raise HTTPException(status_code=404, detail="Draft not found")
     return {
@@ -392,8 +532,8 @@ async def get_draft(draft_id: int):
     }
 
 @app.delete("/api/drafts/{draft_id}")
-async def delete_draft(draft_id: int):
-    delete_result = drafts_collection.delete_one({"draft_id": draft_id})
+async def delete_draft(draft_id: int, user: dict = Depends(get_current_user)):
+    delete_result = drafts_collection.delete_one({"draft_id": draft_id, "created_by": user["user_id"]})
     if delete_result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Draft not found")
     return {"message": "Draft deleted successfully"}

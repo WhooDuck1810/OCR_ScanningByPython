@@ -14,6 +14,9 @@ export default function Editor() {
   const [timeLimitStr, setTimeLimitStr] = useState('300');
   const [questionLimitStr, setQuestionLimitStr] = useState('all');
   const [shuffleAnswers, setShuffleAnswers] = useState(true);
+  const [shareLink, setShareLink] = useState(null);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [copied, setCopied] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -125,6 +128,46 @@ export default function Editor() {
     setIsSaving(false);
   };
 
+  const handlePublishAndShare = async () => {
+    if (parsedData.length === 0) {
+      alert("Please generate preview first");
+      return;
+    }
+    setIsPublishing(true);
+    try {
+      const res = await axios.post(`${API_BASE_URL}/api/save-quiz`, {
+        name: `Quiz Draft${draftId ? ` #${draftId}` : ''}`,
+        questions: parsedData,
+      });
+      const quizId = res.data.quiz_id;
+      const inviteRes = await axios.post(`${API_BASE_URL}/api/quizzes/${quizId}/invite`);
+      const link = `${window.location.origin}/take/${quizId}?invite=${inviteRes.data.invite_token}`;
+      setShareLink(link);
+    } catch (err) {
+      console.error("Error publishing quiz", err);
+      alert("Failed to publish quiz. Please try again.");
+    }
+    setIsPublishing(false);
+  };
+
+  const handleCopyLink = async () => {
+    if (!shareLink) return;
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      const input = document.createElement('input');
+      input.value = shareLink;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   return (
     <div className="min-h-[calc(100vh-73px)] bg-slate-900 text-slate-100 flex p-6 gap-6 font-sans">
       {/* Left Pane: Raw Text */}
@@ -172,6 +215,13 @@ export default function Editor() {
             <span className="text-emerald-400">✨</span> Live Preview
           </h2>
           <div className="flex gap-3">
+            <button
+              onClick={handlePublishAndShare}
+              disabled={!parsedData.length || isPublishing}
+              className={`px-5 py-2 font-bold rounded-lg transition-all ${parsedData.length && !isPublishing ? 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-500/20' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
+            >
+              {isPublishing ? 'Publishing...' : 'Share Link'}
+            </button>
             <button 
               onClick={() => handleOpenSetup('normal')} 
               disabled={!parsedData.length || isSaving} 
@@ -188,6 +238,30 @@ export default function Editor() {
             </button>
           </div>
         </div>
+
+        {shareLink && (
+          <div className="bg-cyan-900/30 border border-cyan-500/40 rounded-xl p-4 flex items-center gap-3">
+            <span className="text-cyan-400 text-lg flex-shrink-0">🔗</span>
+            <input
+              readOnly
+              value={shareLink}
+              className="flex-1 bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2 text-sm text-cyan-300 font-mono outline-none"
+              onFocus={(e) => e.target.select()}
+            />
+            <button
+              onClick={handleCopyLink}
+              className={`px-4 py-2 font-bold rounded-lg text-sm transition-all flex-shrink-0 ${copied ? 'bg-emerald-600 text-white' : 'bg-cyan-600 hover:bg-cyan-500 text-white'}`}
+            >
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+            <button
+              onClick={() => setShareLink(null)}
+              className="text-slate-500 hover:text-slate-300 transition-colors flex-shrink-0 text-lg leading-none"
+            >
+              &times;
+            </button>
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar flex flex-col gap-4">
           {parsedData.length === 0 ? (
