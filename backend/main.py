@@ -27,11 +27,11 @@ from timer_backend import (
 from dotenv import load_dotenv
 # Load root .env
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
-# Also load local .env (useful for backend-specific keys like GEMINI_API_KEY)
-load_dotenv()
 
 MONGO_URI = os.getenv("DB")
 JWT_SECRET = os.getenv("JWT_SECRET", "quizauto-dev-secret-change-in-production")
+API_HOST = os.getenv("API_HOST", "0.0.0.0")
+API_PORT = int(os.getenv("API_PORT", 8088))
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_HOURS = 72
 
@@ -607,7 +607,7 @@ if __name__ == "__main__":
     
     uvicorn.run(
         app, 
-        host="0.0.0.0", 
-        port=8088,
+        host=API_HOST, 
+        port=API_PORT,
         log_level="info"
     )
