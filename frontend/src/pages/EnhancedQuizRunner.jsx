@@ -39,6 +39,7 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
       const stateTimeLimit = location.state?.timeLimit;
       const isShuffle = location.state?.isShuffle || false;
       const isShuffleAnswers = location.state?.isShuffleAnswers || false;
+      const inviteToken = location.state?.inviteToken;
 
       const effectiveQuizData = propQuizData || stateQuizData;
       let resolvedTimeLimit = stateTimeLimit || propTimeLimit;
@@ -58,7 +59,10 @@ const EnhancedQuizRunner = ({ quizId: propQuizId, quizData: propQuizData, timeLi
           setEffectiveTimeLimit(resolvedTimeLimit);
           setCanShowAnswers(Boolean(effectiveQuizData.allow_answer_review));
         } else if (quizId !== 'draft') {
-          const response = await axios.get(`${API_BASE_URL}/api/quizzes/${quizId}`);
+          const quizUrl = inviteToken
+            ? `${API_BASE_URL}/api/quizzes/${quizId}?invite_token=${encodeURIComponent(inviteToken)}`
+            : `${API_BASE_URL}/api/quizzes/${quizId}`;
+          const response = await axios.get(quizUrl);
           setQuestions(applyShuffles(response.data.questions));
           setQuizName(response.data.name);
           const lockedLimit = response.data.lock_time_limit ? (response.data.time_limit || resolvedTimeLimit) : resolvedTimeLimit;

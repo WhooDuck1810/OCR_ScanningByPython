@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const isCreator = user?.role === 'creator';
   const [history] = useState(() => {
     const data = JSON.parse(localStorage.getItem('quizHistory') || '[]');
     return data.reverse(); // latest first
@@ -21,6 +24,10 @@ export default function Dashboard() {
   const [selectedQuestions, setSelectedQuestions] = useState([]);
   const [selectedQuizName, setSelectedQuizName] = useState('');
   
+  const [shareLink, setShareLink] = useState(null);
+  const [shareLoading, setShareLoading] = useState(null);
+  const [copied, setCopied] = useState(false);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,6 +48,48 @@ export default function Dashboard() {
     setSelectedQuizName(`Retake: ${record.quizName}`);
     setSetupMode('normal');
     setShowSetup(true);
+  };
+
+  const handlePublishDraft = async (draftId) => {
+    setShareLoading(draftId);
+    try {
+      const draftRes = await axios.get(`${API_BASE_URL}/api/drafts/${draftId}`);
+      if (!draftRes.data || !draftRes.data.parsed_data) {
+        alert("Draft has no parsed questions.");
+        setShareLoading(null);
+        return;
+      }
+      const res = await axios.post(`${API_BASE_URL}/api/save-quiz`, {
+        name: `Draft #${draftId}`,
+        questions: draftRes.data.parsed_data,
+      });
+      const quizId = res.data.quiz_id;
+      const inviteRes = await axios.post(`${API_BASE_URL}/api/quizzes/${quizId}/invite`);
+      const link = `${window.location.origin}/take/${quizId}?invite=${inviteRes.data.invite_token}`;
+      setShareLink(link);
+    } catch (err) {
+      console.error("Error publishing draft", err);
+      alert("Failed to publish quiz.");
+    }
+    setShareLoading(null);
+  };
+
+  const handleCopyLink = async () => {
+    if (!shareLink) return;
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      const input = document.createElement('input');
+      input.value = shareLink;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const handleOpenDraftSetup = async (draftId, mode) => {
@@ -89,7 +138,9 @@ export default function Dashboard() {
     <div style={{ maxWidth: '1000px', margin: '40px auto', padding: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
         <h2>Dashboard - Overview</h2>
-        <button onClick={() => navigate('/editor')} style={{ padding: '10px 20px', background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Create New Quiz</button>
+        {isCreator && (
+          <button onClick={() => navigate('/editor')} style={{ padding: '10px 20px', background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Create New Quiz</button>
+        )}
       </div>
 
       {/* Cards View for Overview */}
@@ -109,6 +160,31 @@ export default function Dashboard() {
           <p style={{ fontSize: '32px', fontWeight: 'bold', margin: '10px 0 0 0' }}>{drafts.length}</p>
         </div>
       </div>
+
+      {/* Share Link Banner */}
+      {shareLink && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', background: '#ecfeff', border: '1px solid #a5f3fc', borderRadius: '8px', marginBottom: '20px' }}>
+          <span style={{ fontSize: '20px', flexShrink: 0 }}>🔗</span>
+          <input
+            readOnly
+            value={shareLink}
+            style={{ flex: 1, padding: '8px 12px', border: '1px solid #ccc', borderRadius: '4px', fontFamily: 'monospace', fontSize: '14px', color: '#0e7490', background: 'white' }}
+            onFocus={(e) => e.target.select()}
+          />
+          <button
+            onClick={handleCopyLink}
+            style={{ padding: '8px 16px', background: copied ? '#16a34a' : '#0891b2', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px', flexShrink: 0 }}
+          >
+            {copied ? 'Copied!' : 'Copy Link'}
+          </button>
+          <button
+            onClick={() => setShareLink(null)}
+            style={{ background: 'none', border: 'none', fontSize: '18px', color: '#94a3b8', cursor: 'pointer', padding: '4px', flexShrink: 0 }}
+          >
+            &times;
+          </button>
+        </div>
+      )}
 
       {/* Draft Vault Section */}
       <h3 style={{ borderBottom: '2px solid #eaecef', paddingBottom: '10px', marginTop: '40px' }}>Your Saved Drafts</h3>
@@ -136,7 +212,12 @@ export default function Dashboard() {
                   <td style={{ padding: '12px', color: '#666' }}>{new Date(d.updated_at).toLocaleString()}</td>
                   <td style={{ padding: '12px', color: '#666' }}>{d.question_count}</td>
                   <td style={{ padding: '12px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                    <button onClick={() => navigate('/editor')} style={{ padding: '6px 12px', background: '#f8f9fa', color: '#495057', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>Edit Content</button>
+                    {isCreator && (
+                      <>
+                        <button onClick={() => navigate('/editor')} style={{ padding: '6px 12px', background: '#f8f9fa', color: '#495057', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>Edit Content</button>
+                        <button onClick={() => handlePublishDraft(d.id)} disabled={shareLoading === d.id} style={{ padding: '6px 12px', background: '#0891b2', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', opacity: shareLoading === d.id ? 0.6 : 1 }}>{shareLoading === d.id ? 'Publishing...' : 'Share Link'}</button>
+                      </>
+                    )}
                     <button onClick={() => handleOpenDraftSetup(d.id, 'normal')} style={{ padding: '6px 12px', background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>Take Normal</button>
                     <button onClick={() => handleOpenDraftSetup(d.id, 'shuffle')} style={{ padding: '6px 12px', background: '#8b5cf6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>Shuffle</button>
                   </td>
