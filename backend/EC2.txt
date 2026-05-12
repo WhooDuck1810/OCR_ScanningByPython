@@ -1,0 +1,28 @@
+### Setup Steps for Ubuntu (AWS EC2)
+
+1. Update System & Install Python:
+   sudo apt update
+   sudo apt install python3-pip python3-venv python3-dev -y
+
+2. Navigate to Project Directory:
+   cd OCR_ScanningByPython/backend
+
+3. Create and Activate Virtual Environment:
+   python3 -m venv venv
+   source venv/bin/activate
+
+4. Install Dependencies:
+   pip install --upgrade pip
+   pip install -r requirements.txt
+
+5. Create the .env File (in the project root):
+   nano ../.env
+   # Add the following:
+   DB=mongodb+srv://ducnguyen0022521670:242huuduc@cluster0.eko79lu.mongodb.net/
+   JWT_SECRET=quizauto-dev-secret-change-in-production
+
+6. Run the Backend:
+   python3 main.py
+
+7. AWS Security Groups:
+   Open port 8088 in Inbound Rules for your EC2 instance.
