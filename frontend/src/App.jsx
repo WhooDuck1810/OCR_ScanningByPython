@@ -8,6 +8,7 @@ import Runner from './pages/Runner';
 import Dashboard from './pages/Dashboard';
 import EnhancedQuizRunner from './pages/EnhancedQuizRunner';
 import EnhancedResults from './pages/EnhancedResults';
+import CreatorAnalytics from './pages/CreatorAnalytics';
 import TakeQuiz from './pages/TakeQuiz';
 import Login from './pages/Login';
 
@@ -55,7 +56,10 @@ function AppNav() {
           <>
             <NavLink to="/" className={navLinkStyle}>Home</NavLink>
             {user?.role === 'creator' && (
-              <NavLink to="/editor" className={navLinkStyle}>Editor</NavLink>
+              <>
+                <NavLink to="/editor" className={navLinkStyle}>Editor</NavLink>
+                <NavLink to="/analytics" className={navLinkStyle}>Analytics</NavLink>
+              </>
             )}
             <NavLink to="/dashboard" className={navLinkStyle}>Dashboard</NavLink>
             <div className="ml-4 flex items-center gap-3 border-l border-slate-700 pl-4">
@@ -98,6 +102,7 @@ function App() {
           <Route path="/editor" element={<ProtectedRoute creatorsOnly><Editor /></ProtectedRoute>} />
           <Route path="/runner/:quizId?" element={<ProtectedRoute><Runner /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute creatorsOnly><CreatorAnalytics /></ProtectedRoute>} />
 
           {/* Public routes - accessible via invite links without auth */}
           <Route path="/take/:quizId" element={<TakeQuiz />} />

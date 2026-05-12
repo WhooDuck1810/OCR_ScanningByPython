@@ -9,7 +9,8 @@ const EnhancedResults = () => {
     questions,
     originalQuestions = [],
     quizName: passedQuizName = '',
-    timeLimit: passedTimeLimit = 300
+    timeLimit: passedTimeLimit = 300,
+    canShowAnswers: canShowAnswersFromState = false
   } = location.state || {};
   const [expandedQuestion, setExpandedQuestion] = useState(null);
   const [filter, setFilter] = useState('all'); // 'all', 'correct', 'incorrect'
@@ -55,10 +56,13 @@ const EnhancedResults = () => {
   const incorrectCount = total_questions - score;
   const accuracy = ((score / total_questions) * 100).toFixed(1);
   
+  const canShowAnswers = Boolean(results?.can_show_answers ?? canShowAnswersFromState);
+  const safeDetailedResults = canShowAnswers ? (Array.isArray(detailedResults) ? detailedResults : []) : [];
+
   // Filter questions based on selection
-  const filteredQuestions = (Array.isArray(detailedResults) ? detailedResults : []).filter((_, idx) => {
-    if (filter === 'correct') return detailedResults[idx].isCorrect;
-    if (filter === 'incorrect') return !detailedResults[idx].isCorrect;
+  const filteredQuestions = safeDetailedResults.filter((_, idx) => {
+    if (filter === 'correct') return safeDetailedResults[idx].isCorrect;
+    if (filter === 'incorrect') return !safeDetailedResults[idx].isCorrect;
     return true;
   });
 
@@ -210,6 +214,7 @@ const EnhancedResults = () => {
         </div>
 
         {/* Detailed Question Review */}
+        {canShowAnswers ? (
         <div style={styles.detailsSection}>
           <div style={styles.detailsHeader}>
             <h3 style={styles.detailsTitle}>
@@ -327,6 +332,11 @@ const EnhancedResults = () => {
             })}
           </div>
         </div>
+        ) : (
+          <div style={styles.message}>
+            Creator is not allowing detailed answer review for this quiz.
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div style={styles.buttonGroup}>
